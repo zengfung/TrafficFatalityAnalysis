@@ -10,7 +10,48 @@ output:
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(fig.pos = 'H')
 library(AER)
+library(AER)
+library(ggplot2)
+library(plotly)
+library(tidyverse)
+library(dplyr)
+rm(list=ls())
 data("Fatalities")
+```
+```{r visualization}
+# mean (years)
+mapping <- Fatalities %>% select(state,year,pop,fatal) %>% mutate(state=toupper(state))
+map <- mapping %>% group_by(state) %>% summarise(pop=mean(pop),fatal=mean(fatal)) 
+map$hover <- with(map, paste(state, '<br>', "pop", pop, "fatal", fatal))
+
+# give state boundaries a white border
+l <- list(color = toRGB("white"), width = 2)
+# specify some map projection/options
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white')
+)
+
+fig <- plot_geo(map, locationmode = 'USA-states')
+fig <- fig %>% add_trace(
+    z = ~fatal, text=~hover,locations = ~state,
+    color = ~fatal, colors = 'Purples'
+  )
+fig <- fig %>% colorbar(title = "Number of vehicle fatalities")
+fig <- fig %>% layout(
+    title = 'US Traffic Fatalities',
+    geo = g,
+  yaxis = list(type = "log")
+  )
+fig
+
+# by year
+gg <- ggplot(mapping, aes(pop,fatal, color = state)) +
+  geom_point(aes(size = fatal, frame = year, ids = state)) +
+  scale_x_log10()
+ggplotly(gg)
 ```
 
 ***
