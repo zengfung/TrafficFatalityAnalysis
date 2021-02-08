@@ -73,9 +73,42 @@ fig = plot_ly(Fatalities, x = ~fatal, y = ~afatal, color=~breath, type="scatter"
     title = "Scatter Plot",
     xaxis = list(title = "x"),
     yaxis = list(title = "y"),
+    annotations = list(
+      list(
+        y = 0.7,
+        x = -0.35,
+        text = "y-axis",
+        yref = "paper",
+        yanchor = "bottom",
+        xref = "paper",
+        xanchor = "left",
+        showarrow = FALSE
+      ),
+      list(
+        y = 0.55,
+        x = -0.35,
+        text = "x-axis",
+        yref = "paper",
+        yanchor = "bottom",
+        xref = "paper",
+        xanchor = "left",
+        showarrow = FALSE
+      ),
+      list(
+        y = 0.4,
+        x = -0.35,
+        text = "color",
+        yref = "paper",
+        yanchor = "bottom",
+        xref = "paper",
+        xanchor = "left",
+        showarrow = FALSE
+      )
+    ),
     updatemenus = list(
       list(
         y = 0.7,
+        x = -0.2,
         buttons = list(
           list(method = "restyle",
                args = list("y", list(afatal)),
@@ -86,7 +119,8 @@ fig = plot_ly(Fatalities, x = ~fatal, y = ~afatal, color=~breath, type="scatter"
         )
       ),
       list(
-        y = 0.6,
+        y = 0.55,
+        x = -0.2,
         buttons = list(
           list(method = "restyle",
                args = list("x", list(fatal)),
@@ -97,13 +131,14 @@ fig = plot_ly(Fatalities, x = ~fatal, y = ~afatal, color=~breath, type="scatter"
         )
       ),
       list(
-        y = 0.5,
+        y = 0.4,
+        x = -0.2,
         buttons = list(
           list(method = "restyle",
-               args = list("color", list(breath)),
+               args = list("marker.color", list(breath)),
                label = "breath"),
           list(method = "restyle",
-               args = list("color", list(jail)),
+               args = list("marker.color", list(jail)),
                label = "jail")
         )
       )
