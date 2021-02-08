@@ -1,0 +1,118 @@
+---
+title: "zengfung's notes"
+author: "Zeng Fung Liew"
+date: "2/7/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Import data
+```{r}
+library(AER)
+data("Fatalities")
+attach(Fatalities)
+```
+
+# Univariate EDA
+## Predictor variables
+```{r}
+# the data for all 48 states were present for each year
+table(year)
+```
+
+```{r}
+par(mfrow=c(2,3))
+# beertax
+hist(beertax)
+# percent residing in dry counties
+hist(dry)
+hist(unemp)
+pie(table(breath), main = "breath")
+pie(table(jail), main = "jail")
+pie(table(service), main = "service")
+```
+
+Question: do we want to round down the drink age? Then make this categorical?
+```{r}
+table(drinkage)
+# round down age
+pie(table(floor(drinkage)), main="drinkage")
+```
+
+## Response variables
+```{r}
+par(mfrow=c(2,3))
+hist(fatal, main = "number of fatalities")
+hist(nfatal, main = "number of night fatalities")
+hist(afatal, main = "number of alcohol related fatalities")
+hist(fatal/pop, main = "rate of fatalities")
+hist(nfatal/pop, main="rate of night fatalities")
+hist(afatal/pop, main = "rate of afatal")
+
+hist(nfatal/fatal, main="prop. of nfatal among fatal")
+hist(afatal/fatal, main="prop. of afatal among fatal")
+hist(afatal/nfatal, main="prop. of afatal among nfatal") # doesn't work
+```
+
+# Multivariate EDA
+https://plotly.com/r/dropdowns/ <br>
+https://stackoverflow.com/questions/40024029/plotly-updating-data-with-dropdown-selection <br>
+Note: <br>
+* need to figure out how to add names beside button <br>
+* figure out how to adjust color of scatter plot <br>
+* add more variables on x, y, color buttons
+```{r}
+library(plotly)
+library(dplyr)
+fig = plot_ly(Fatalities, x = ~fatal, y = ~afatal, color=~breath, type="scatter",
+              name = ~breath, visible = T) %>%
+  layout(
+    title = "Scatter Plot",
+    xaxis = list(title = "x"),
+    yaxis = list(title = "y"),
+    updatemenus = list(
+      list(
+        y = 0.7,
+        buttons = list(
+          list(method = "restyle",
+               args = list("y", list(afatal)),
+               label = "afatal"),
+          list(method = "restyle",
+               args = list("y", list(nfatal)),
+               label = "nfatal")
+        )
+      ),
+      list(
+        y = 0.6,
+        buttons = list(
+          list(method = "restyle",
+               args = list("x", list(fatal)),
+               label = "fatal"),
+          list(method = "restyle",
+               args = list("x", list(nfatal)),
+               label = "nfatal")
+        )
+      ),
+      list(
+        y = 0.5,
+        buttons = list(
+          list(method = "restyle",
+               args = list("color", list(breath)),
+               label = "breath"),
+          list(method = "restyle",
+               args = list("color", list(jail)),
+               label = "jail")
+        )
+      )
+    )
+  )
+fig
+```
+
+# Model fitting
+Note: goal is to observe whether the type of law implemented to tacker drunk driving can actually prevent fatalities
+```{r}
+```
