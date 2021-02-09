@@ -6,14 +6,21 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning = FALSE)
 ```
 
 # Import data
 ```{r}
 library(AER)
 data("Fatalities")
+Fatalities$fatal_rate = Fatalities$fatal/Fatalities$pop*10000
+Fatalities$afatal_rate = Fatalities$afatal/Fatalities$pop*10000
+Fatalities$nfatal_rate = Fatalities$nfatal/Fatalities$pop*10000
+Fatalities$afatal_prop = Fatalities$afatal/Fatalities$fatal
+Fatalities$drinkage_cat = as.factor(floor(Fatalities$drinkage))
+
 attach(Fatalities)
+
 ```
 
 # Univariate EDA
@@ -58,96 +65,74 @@ hist(afatal/nfatal, main="prop. of afatal among nfatal") # doesn't work
 ```
 
 # Multivariate EDA
-https://plotly.com/r/dropdowns/ <br>
-https://stackoverflow.com/questions/40024029/plotly-updating-data-with-dropdown-selection <br>
-Note: <br>
-* need to figure out how to add names beside button <br>
-* figure out how to adjust color of scatter plot <br>
-* add more variables on x, y, color buttons
+mean response plot:
+
 ```{r}
+library(gplots)
+par(mfrow=c(2,2))
+plotmeans(afatal_prop ~ drinkage_cat)
+plotmeans(afatal_prop ~ breath)
+plotmeans(afatal_prop ~ jail)
+plotmeans(afatal_prop ~ service)
+par(mfrow=c(2,1))
+plotmeans(afatal_prop ~ year)
+plotmeans(afatal_prop ~ state)
+```
+
+`jail` and `service` have shown slight increase by year. <br>
+`drinkage` have mainly shifted from 18-19 in 1982 to 21 in 1988.
+```{r}
+table(jail, year)
+table(service, year)
+table(drinkage_cat, year)
+```
+
+
+```{r}
+library(ggplot2)
 library(plotly)
-library(dplyr)
-fig = plot_ly(Fatalities, x = ~fatal, y = ~afatal, color=~breath, type="scatter",
-              name = ~breath, visible = T) %>%
-  layout(
-    title = "Scatter Plot",
-    xaxis = list(title = "x"),
-    yaxis = list(title = "y"),
-    annotations = list(
-      list(
-        y = 0.7,
-        x = -0.35,
-        text = "y-axis",
-        yref = "paper",
-        yanchor = "bottom",
-        xref = "paper",
-        xanchor = "left",
-        showarrow = FALSE
-      ),
-      list(
-        y = 0.55,
-        x = -0.35,
-        text = "x-axis",
-        yref = "paper",
-        yanchor = "bottom",
-        xref = "paper",
-        xanchor = "left",
-        showarrow = FALSE
-      ),
-      list(
-        y = 0.4,
-        x = -0.35,
-        text = "color",
-        yref = "paper",
-        yanchor = "bottom",
-        xref = "paper",
-        xanchor = "left",
-        showarrow = FALSE
-      )
-    ),
-    updatemenus = list(
-      list(
-        y = 0.7,
-        x = -0.2,
-        buttons = list(
-          list(method = "restyle",
-               args = list("y", list(afatal)),
-               label = "afatal"),
-          list(method = "restyle",
-               args = list("y", list(nfatal)),
-               label = "nfatal")
-        )
-      ),
-      list(
-        y = 0.55,
-        x = -0.2,
-        buttons = list(
-          list(method = "restyle",
-               args = list("x", list(fatal)),
-               label = "fatal"),
-          list(method = "restyle",
-               args = list("x", list(nfatal)),
-               label = "nfatal")
-        )
-      ),
-      list(
-        y = 0.4,
-        x = -0.2,
-        buttons = list(
-          list(method = "restyle",
-               args = list("marker.color", list(breath)),
-               label = "breath"),
-          list(method = "restyle",
-               args = list("marker.color", list(jail)),
-               label = "jail")
-        )
-      )
-    )
-  )
-fig
+p1 = ggplot(data = Fatalities, aes(x = dry, y = afatal_prop, color = drinkage_cat, frame = year)) + 
+  geom_point(alpha = 0.7) + 
+  ylab("% alcohol fatalities") +
+  ggtitle("Dry, Unemployment %, and Beer Tax") +
+  theme(legend.title = element_blank(), legend.position = "none")
+p2 = ggplot(data = Fatalities, aes(x = unemp, y = afatal_prop, color = drinkage_cat, frame = year)) + 
+  geom_point(alpha = 0.7) + 
+  theme(legend.title = element_blank(), legend.position = "none")
+p3 = ggplot(data = Fatalities, aes(x = beertax, y = afatal_prop, color = drinkage_cat, frame = year)) +
+  geom_point(alpha = 0.7) +
+  labs(color = "Drink Age")
+
+fig = subplot(ggplotly(p1), ggplotly(p2), ggplotly(p3), nrows = 1, shareY = TRUE)
+fig 
 ```
 
 # Model fitting
 Note: goal is to observe whether the type of law implemented to tacker drunk driving can actually prevent fatalities
+
+* panel linear model, using state as panel <br>
+not entirely sure how to interpret the `model="within"` part.
 ```{r}
+library(plm)
+model = plm(afatal_prop ~ beertax + jail + service + drinkage,
+            data = Fatalities,
+            index = "state",
+            model = "within")
+summary(model)
+```
+* lmer model with year as random effect
+```{r}
+library(lme4)
+lmer.model = lmer(afatal_prop ~ beertax + jail + service + drinkage_cat + (1|year))
+summary(lmer.model)
+anova(lmer.model)
+```
+
+* regular lm model <br>
+state and year are highly significant predictors, but they are not what we're after
+
+```{r}
+lm.model = lm(afatal_prop ~ beertax + jail + service + drinkage_cat + state + year)
+summary(lm.model)
+anova(lm.model)
 ```
