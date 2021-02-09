@@ -105,13 +105,25 @@ p3 = ggplot(data = Fatalities, aes(x = beertax, y = afatal_prop, color = drinkag
 
 fig = subplot(ggplotly(p1), ggplotly(p2), ggplotly(p3), nrows = 1, shareY = TRUE)
 fig 
+
+p4 = ggplot(data = Fatalities, aes(x = youngdrivers, fill = drinkage_cat)) +
+  geom_histogram(position = "identity", alpha = 0.5) +
+  facet_grid(rows = vars(year))
+p4
 ```
+
+dont think unemployment rate is a good predictor, as it doesnt fit our goals from this analysis. can add into the discussion sections tho
+
+percentage of young drivers have decreased over the years as the number of states that changed their drinkage to 21 has increased. however, later on (if i use a mixed effects model) drinkage is not exactly a good predictor (not significant).
+
 
 # Model fitting
 Note: goal is to observe whether the type of law implemented to tacker drunk driving can actually prevent fatalities
 
 * panel linear model, using state as panel <br>
-not entirely sure how to interpret the `model="within"` part.
+not entirely sure how to interpret the `model="within"` part. <br>
+if i index on "state", beertax is not a significant predictor. <br> 
+if i index on "year", drinkage is not a significant predictor
 ```{r}
 library(plm)
 model = plm(afatal_prop ~ beertax + jail + service + drinkage,
@@ -120,19 +132,55 @@ model = plm(afatal_prop ~ beertax + jail + service + drinkage,
             model = "within")
 summary(model)
 ```
-* lmer model with year as random effect
+* lmer model with state as random effect
 ```{r}
 library(lme4)
-lmer.model = lmer(afatal_prop ~ beertax + jail + service + drinkage_cat + (1|year))
+lmer.model = lmer(afatal_prop ~ beertax + jail + service + drinkage_cat + (1|state))
+summary(lmer.model)
+anova(lmer.model)
+```
+if i use year as random effect, it seems that drink age does not really correlate to alcohol fatalities. <br>
+if i use state as random effect, jail is not a significant predictor of alcohol fatalities
+
+* regular lm model <br>
+state and year are highly significant predictors, but they are not what we're after <br>
+if we dont include them this causes drinkage and jail to not be significant predictors
+
+```{r}
+lm.model = lm(afatal_prop ~ beertax + jail + service + drinkage_cat )
+summary(lm.model)
+anova(lm.model)
+```
+
+# Trying out with transformation of variables
+seems like it's slightly better, but its way harder to interpret the findings now
+```{r}
+library(MASS)
+boxcox(lm.model)
+Fatalities$inv_afatal_prop = 1/Fatalities$afatal_prop
+```
+
+* panel linear model <br>
+```{r}
+library(plm)
+plm.model = plm(inv_afatal_prop ~ beertax + jail + service + drinkage,
+            data = Fatalities,
+            index = "state",
+            model = "within")
+summary(plm.model)
+```
+
+* random effects model <br>
+jail is still the least significant
+```{r}
+lmer.model = lmer(inv_afatal_prop ~ beertax + jail + service + drinkage_cat + (1|state),data = Fatalities)
 summary(lmer.model)
 anova(lmer.model)
 ```
 
-* regular lm model <br>
-state and year are highly significant predictors, but they are not what we're after
-
+* fixed effects model <br>
 ```{r}
-lm.model = lm(afatal_prop ~ beertax + jail + service + drinkage_cat + state + year)
+lm.model = lm(inv_afatal_prop ~ beertax + jail + service + drinkage_cat, data = Fatalities )
 summary(lm.model)
 anova(lm.model)
 ```
