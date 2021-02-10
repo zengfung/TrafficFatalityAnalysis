@@ -9,16 +9,19 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r,include=FALSE}
 library(tidyverse)
 library(AER)
 library(ggplot2)
+library(plm)
+library(devtools)
+devtools::install_github("beniaminogreen/cragg")
+library(cragg)
 ```
 
 ```{r}
 data('Fatalities')
-names(Fatalities)
-drunkdrive = Fatalities[c("state","year","spirits","beertax","drinkage","dry","breath","jail","service","fatal","nfatal","afatal","pop")]
+drunkdrive = Fatalities[c("state","year","spirits","beertax","drinkage","dry","breath","jail","service","fatal","nfatal","afatal","pop","unemp")]
 ```
 
 ```{r}
@@ -30,6 +33,7 @@ drunkdrive[!complete.cases(drunkdrive),] # california 1988 jail service
 drunkdrive = na.omit(drunkdrive)
 # calculate fatal_rate and afatal_rate as #fatal/10000 people
 drunkdrive <- drunkdrive %>% mutate(fatal_rate = 10000*fatal/pop,afatal_rate = 10000*afatal/pop)
+drunkdrive <-drunkdrive %>% mutate(afatalratio = afatal/fatal)
 ```
 
 ```{r,warning=FALSE}
@@ -62,9 +66,85 @@ ggplot(jail_year,aes(x=year,y=state_number,fill=jail))+geom_bar(position="Fill",
 # stacked barchart of jail for each year (many states changed their min. drinking age over yers)
 service_year = drunkdrive %>% group_by(year,service) %>%summarise(state_number = n())
 ggplot(service_year,aes(x=year,y=state_number,fill=service))+geom_bar(position="Fill",stat="identity") + labs(y="Percent of states", legend = "Mandatory community service?") + scale_fill_brewer(palette="Blues")
+# unemp
+
 # state_mean fatal_rate histogram
 ggplot(drunkdrive,aes(x=fatal_rate))+geom_histogram(binwidth = 0.2, color='steelblue',fill='steelblue1')
 # state_mean afatal_rate histogram
 ggplot(drunkdrive,aes(x=afatal_rate))+geom_histogram(binwidth = 0.1, color='steelblue',fill='steelblue1')
+
+Fatalities = na.omit(Fatalities)
+categ = names(Fatalities) %in% c("state","year","breath","jail","service")
+Fatalities_conti = Fatalities[,!categ]
+sapply(1:29, function(x){
+  boxplot(Fatalities_conti[,x]~drunkdrive$jail,ylab = names(Fatalities_conti)[x])
+})
+
+```
+
+```{r}
+# instrumental variable: endogenous covariate: spirits; IV: beertax, drinkage
+boxplot(spirits~drinkagec,data=drunkdrive)
+plot(beertax,spirits,data=drunkdrive)
+
+# beertax not significant on spirits
+bx_sp = lm(spirits~beertax,data=drunkdrive)
+summary(bx_sp)
+
+# drinkage: significant F statistic
+da_sp = lm(spirits~drinkagec, data=drunkdrive)
+summary(da_sp)
+
+# test for week instrument for drinkage
+stock_yogo_test(
+  ~beertax+ dry + unemp + breath + jail + service,
+  ~spirits,
+  ~drinkagec,
+  B=.1,
+  size_bias="size",
+  data=drunkdrive
+  )
+
+```
+
+```{r}
+# model fitting
+# state fixed effec model
+drunkdrive = drunkdrive[,!names(drunkdrive) %in% c("drinkage")]
+
+fit1 = plm(fatal_rate~spirits + beertax + drinkagec + dry + unemp + breath + jail + service,data=drunkdrive,index=c("state","year"),model="within")
+summary(fit1)
+
+fit2 = plm(afatal_rate~spirits + beertax + drinkagec + dry + unemp + breath + jail + service,data=drunkdrive,index=c("state","year"),model="within")
+summary(fit2)
+
+fit3 = plm(afatalratio~spirits + beertax + drinkagec + dry + unemp + breath + jail + service, data=drunkdrive, index=c("state","year"),model="within")
+summary(fit3)
+
+fit4 = plm(afatalratio~spirits + beertax + drinkagec + dry + unemp + breath + jail + service|.-jail-service+lag(jail,1)+lag(service,1), data=drunkdrive, index=c("state","year"),model="within")
+summary(fit4)
+
+R2_plm = function(model) {
+  e = residuals(model)
+  sse = t(e)%*%e
+  y = model$model[,1]
+  sst = sum((y-mean(y))^2)
+  1-sse/sst
+}
+R2_adj_plm = function(model){
+  e = residuals(model)
+  sse = t(e)%*%e
+  y = model$model[,1]
+  sst = sum((y-mean(y))^2)
+  r2 = 1-sse/sst
+  n = length(y)
+  p = length(coef(model))
+  1-(1-r2)*(n-1)/(n-p-1)
+}
+
+R2_fit3 = R2_plm(fit3)
+R2_adj_plm(fit3)
+
+
 ```
 
