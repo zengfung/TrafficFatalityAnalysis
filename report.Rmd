@@ -22,6 +22,29 @@ knitr::opts_chunk$set(fig.pos = 'H')
 
 
 # Inferential analysis 
+```{r}
+library(AER)
+library(AER)
+library(ggplot2)
+library(gplots)
+library(plotly)
+library(tidyverse)
+library(dplyr)
+rm(list=ls())
+data("Fatalities")
+Fatalities$drinkage <-as.factor(floor(Fatalities$drinkage))
+# apply(is.na(Fatalities), 2, which) 
+data <- Fatalities  %>%mutate(fatal_r=(fatal/pop)*10000,afatal_r=(afatal/pop)*10000) %>% select(state,year,fatal_r,afatal_r,spirits,unemp,beertax,drinkage,dry,breath,jail,service,pop,fatal,nfatal)
+
+library(plm)
+plm_1 <- plm(fatal_r~unemp+jail+drinkage+beertax+spirits+dry+service+breath,data=data,index=c("state","year"),model="within")
+coeftest(plm_1)
+summary(plm_1)
+
+plm_a <- plm(afatal_r~unemp+jail+drinkage+beertax+spirits+dry+service+breath,data=data,index=c("state","year"),model="within")
+coeftest(plm_a)
+summary(plm_a)
+```
 
 
 # Sensitivity analysis 
