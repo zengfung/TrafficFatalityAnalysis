@@ -1,0 +1,216 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) 
+```
+
+# Loading Data Set and naming variables
+
+```{r, warning=FALSE, message=FALSE}
+library(AER)
+data("Fatalities")
+fatal<-Fatalities$fatal
+year<-Fatalities$year
+state<-Fatalities$state
+unemp<-Fatalities$unemp
+beertax<-Fatalities$beertax
+drinkage<-Fatalities$drinkage
+#youngdrivers<-data$youngdrivers
+jail<-Fatalities$jail
+service<-Fatalities$service
+breath<-Fatalities$breath
+dry<-Fatalities$dry
+nfatal<-Fatalities$nfatal
+#fatal1517<-data$fatal1517
+#fatal1820<-data$fatal1820
+#fatal2124<-data$fatal2124
+#afatal<-data$afatal
+#milestot<-data$milestot
+pop<-Fatalities$pop
+#summary(pop)
+#hist(pop)
+#str(Fatalities)
+#head(Fatalities)
+```
+
+
+# Class of variables
+```{r, warning=FALSE, message=FALSE}
+library(panelr)
+rfatal<-fatal/pop*100000
+rnfatal<-nfatal/pop*100000
+dataset<- data.frame(rfatal,rnfatal,year,state,unemp,beertax,drinkage,jail,service,breath,dry,pop)
+dataset<-na.omit(dataset)
+fatal.data<-panel_data(dataset, id=state, wave=year)
+```
+
+# Quant Analysis
+
+```{r}
+dataset82<-dataset[which(dataset$year=="1982"),]
+quant82<-dataset82[,c(1,2,5:7,11,12)]
+pairs(quant82)
+cor(quant82)
+dataset83<-dataset[which(dataset$year=="1983"),]
+quant83<-dataset83[,c(1,2,5:7,11,12)]
+pairs(quant83)
+cor(quant83)
+dataset84<-dataset[which(dataset$year=="1984"),]
+quant84<-dataset84[,c(1,2,5:7,11,12)]
+pairs(quant84)
+cor(quant84)
+dataset85<-dataset[which(dataset$year=="1985"),]
+quant85<-dataset85[,c(1,2,5:7,11,12)]
+pairs(quant85)
+cor(quant85)
+dataset86<-dataset[which(dataset$year=="1986"),]
+quant86<-dataset86[,c(1,2,5:7,11,12)]
+pairs(quant86)
+cor(quant86)
+dataset87<-dataset[which(dataset$year=="1987"),]
+quant87<-dataset87[,c(1,2,5:7,11,12)]
+pairs(quant87)
+cor(quant87)
+dataset88<-dataset[which(dataset$year=="1988"),]
+quant88<-dataset88[,c(1,2,5:7,11,12)]
+pairs(quant88)
+cor(quant88)
+
+```
+
+# Quantitative vs Qualitative Analysis
+```{r, warning=FALSE, message=FALSE}
+par(mfrow=c(2,3))
+boxplot(rfatal~jail, main ='Fatality Rate side by side box plots by Jail Sentence',
+xlab='Jail',ylab='Fatality Rate',col=rainbow(4))
+
+boxplot(rfatal~service, main ='Fatality Rate side by side box plots by Mandatory Service',
+xlab='Service',ylab='Fatality Rate',col=rainbow(4))
+
+boxplot(rfatal~breath, main ='Fatality Rate side by side box plots by Mandatory Breathilizer Test',
+xlab='Breath',ylab='Fatality Rate',col=rainbow(4))
+
+boxplot(rnfatal~jail, main ='Night Fatality Rate side by side box plots by Jail Sentence',
+xlab='Jail',ylab='Fatality Rate',col=rainbow(4))
+
+boxplot(rnfatal~service, main ='Night Fatality Rate side by side box plots by Mandatory Service',
+xlab='Service',ylab='Fatality Rate',col=rainbow(4))
+
+boxplot(rnfatal~breath, main =' Night Fatality Rate side by side box plots by Mandatory Breathilizer Test',
+xlab='Breath',ylab='Fatality Rate',col=rainbow(4))
+```
+ 
+```{r}
+par(mfrow=c(1,2))
+boxplot(rfatal~year, main ='Fatality Rate box plots by Year',
+xlab='Year',ylab='Fatality Rate',col=rainbow(4))
+
+boxplot(rnfatal~year, main =' Night Fatality Rate box plots by Year',
+xlab='Year',ylab='Fatality Rate',col=rainbow(4))
+
+```
+ 
+## Normality Assumption
+```{r}
+shapiro.test(rfatal)
+shapiro.test(rnfatal)
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+ 
+
+library(funModeling)
+
+library(tidyverse)
+
+library(Hmisc)
+
+ 
+
+basic_eda <- function(data)
+
+{
+
+  glimpse(data)
+
+  df_status(data)
+
+  freq(data)
+
+  # profiling_num(data)
+
+  plot_num(data)
+
+  describe(data)
+
+}
+
+ 
+
+basic_eda(fatal.data)
+
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+
+# df_status(data)
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+#freq(fatal.data)
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+# plot_num(fatal.data)
+
+```
+
+ 
+
+ 
+
+```{r, warning=FALSE, message=FALSE}
+
+library(Hmisc)
+
+#describe(fatal.data)
+
+```
+
+ 
+
+```{r, warning=FALSE, message=FALSE}
+
+# data_prof=profiling_num(fatal.data)
+
+```
+
+```{r}
+library(skimr)
+#fatal.data1<-widen_panel(fatal.data)
+#head(fatal.data1) 
+summary(fatal.data, year, rfatal)
+summary(fatal.data, year, rnfatal)
+summary(fatal.data, year, beertax)
+line_plot(fatal.data, rfatal, add.mean = TRUE)
+
+```
+
+```{r}
+
+model<-aov(rfatal~year+Error(state),data=fatal.data)
+summary(model)
+
+```
+
+```{r}
+library(plm)
+modp<-plm(rfatal ~ state +year+drinkage+beertax+breath+jail+dry, data=fatal.data, index =c("state", "year"), model="within")
+summary(modp)
+```
+
