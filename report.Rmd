@@ -21,6 +21,10 @@ knitr::opts_chunk$set(fig.pos = 'H', echo=FALSE, warning=FALSE, message=FALSE)
 # Descriptive analysis 
 
 ## Overview
+To get a good sense on how the data is distributed, each state in the USA is plotted with different shades of purple to signify the rate of vehicle fatalities per 100k people. The reason that the rate of fatalities was chosen instead of the number itself is due to the difference in population in each state. In the map below, while California has an average of more than 5000 fatalities per year, the number is relatively small compared to its population size. In other words, for every 10k people in the state, only 2 people were involved in fatal vehicle accidents.
+
+On the other hand, Texas seemed to have the highest average rate of fatalities per 10k people. With an average population of 16.3 million people between 1982 and 1988, this meant that for every 10k people in Texas, 3.65 people were involved in fatal accidents, which was close to double the amount of California!
+
 ```{r}
 ## Liela's codes
 library(AER)
@@ -69,11 +73,16 @@ fig
 rm(list=ls())
 ```
 
-## Exploratory Analysis
+## Exploratory Data Analysis
+As the focus of this data analysis is to find out whether laws that were implemented to tackle drunk driving related fatalities, only a subset of the variables from the `Fatalities` dataset were used. In particular, response variables that were alcohol-related such as the total number of fatalities and alcohol fatalies were examined, while predictor variables that are closely related to alcohol-consumption-driven laws were also analyzed.
+
 ### Univariate Analysis
+We start off the exploratory data analysis procedure by individually examining the predictor and response variables. The goal here is to understand how the data is distributed, which helps set an expectation on how the variables correlate with each other, or whether model assumptions will be met.
 
 #### Predictor Variables
+As we are looking into how alcohol-consumption-driven laws impact the rate of alcohol-related fatalities, some variables of interest include spirit consumptions, beer tax, proportion of the population living in dry counties, minimum drinking age, and the mandatory punishments implemented by each state throughout the 7 years.
 
+The plot below shows the top 5 states in terms of average spirits consumptions, average beer tax, and average proportion of population living in dry counties between 1982 and 1988. Other than North Carolina (NC) being in the top 5 states for beer tax and containing large proportion of dry residents, it can be seen that there is no other "standout" state below, ie. there's no state present in more than one of the top 5 categories.
 ```{r}
 ## Yixing's codes
 library(tidyverse)
@@ -117,6 +126,9 @@ gridExtra::grid.arrange(p1,p2,p3, nrow = 1,
 rm(list=ls())
 ```
 
+On the other hand, it can be seen that there has been an increasing implementation/tightening of laws throughout the 7 years. The most obvious changes here is the number of states that increased the minimum drinking age. In 1982, almost half the country had set their minimum drinking age to be less than 21, and yet most of the states have opted for 21 to be the minimum drinkage 7 years later.
+
+Additionally, there seem to be a slight increasing trend in the number of states that implement testings (breath test) and punishments (mandatory jail sentence and mandatory community services) between 1982 and 1988. We need to note, however, that the number of states implementing mandatory jail sentences decreased very slightly from 1986 to 1988. This raises the question of whether a mandatory jail sentence is effective in combating the issue of drunk driving. Such questions will be addressed after fitting a suitable model.
 ```{r}
 ## Yixing's codes
 library(AER)
@@ -139,7 +151,7 @@ p2 = ggplot(drinkage_year,aes(x=year,y=state_number,fill=drinkagec))+
   geom_bar(position="Fill",stat="identity") + 
   labs(y="Percent of states", fill = "Min. drink age") + 
   scale_fill_brewer(palette="Blues") +
-  theme(legend.title = element_text(size=8))
+  theme(legend.title = element_text(size=8), axis.text.x = element_text(angle=45))
 
 # stacked barchart of breath for each year (many states changed their min. drinking age over yers)
 breath_year = drunkdrive %>% group_by(year,breath) %>%summarise(state_number = n())
@@ -147,14 +159,15 @@ p3 = ggplot(breath_year,aes(x=year,y=state_number,fill=breath))+
   geom_bar(position="Fill",stat="identity") + 
   labs(y="Percent of states", fill = "Prelim. breath test") + 
   scale_fill_brewer(palette="Blues") +
-  theme(legend.title = element_text(size=7))
+  theme(legend.title = element_text(size=7), axis.text.x = element_text(angle=45))
 
 # stacked barchart of jail for each year (many states changed their min. drinking age over yers)
 jail_year = drunkdrive %>% group_by(year,jail) %>%summarise(state_number = n())
 p4 = ggplot(jail_year,aes(x=year,y=state_number,fill=jail))+
   geom_bar(position="Fill",stat="identity") +
   labs(y="Percent of states", fill = "Mand. Jail") + 
-  scale_fill_brewer(palette="Blues")
+  scale_fill_brewer(palette="Blues") + 
+  theme(axis.text.x = element_text(angle=45))
 
 # stacked barchart of jail for each year (many states changed their min. drinking age over yers)
 service_year = drunkdrive %>% group_by(year,service) %>%summarise(state_number = n())
@@ -162,7 +175,7 @@ p5 = ggplot(service_year,aes(x=year,y=state_number,fill=service))+
   geom_bar(position="Fill",stat="identity") + 
   labs(y="Percent of states", fill = "Mand. comm. service") + 
   scale_fill_brewer(palette="Blues") +
-  theme(legend.title = element_text(size=7))
+  theme(legend.title = element_text(size=7), axis.text.x = element_text(angle=45))
 
 # draw all plots
 gridExtra::grid.arrange(p2,p3,p4,p5, nrow = 2)
@@ -171,6 +184,7 @@ rm(list=ls())
 ```
 
 #### Response Variables
+After observing the trend of the implemented laws, the focus is now switched to analyzing the distribution of fatalities and alcohol fatalities across the country. A quick look at the top two histograms below might suggest that a large portion of states have less than 1000 fatalities per year, and less than 500 alcohol related fatalities per year. However, each state's population need to be taken into account in this case due to the significant variation in population sizes across the country. Our new histograms (bottom two) tells us that the distributions of the data can be approximated as normal. Since the goal of this analysis is to discuss the effects of alcohal-related law implementations, the alcohol-related fatalities to overall fatalities ratio becomes our main topic of interest.
 ```{r}
 ## Zengfung's codes
 library(AER)
@@ -178,14 +192,16 @@ data("Fatalities")
 attach(Fatalities)
 
 par(mfrow=c(2,2))
-hist(fatal, main = "Number of Fatalities")
-hist(afatal, main = "Number of Alc. Related Fatalities")
-hist(fatal/pop*10000, main = "Fatalities/10k pop.")
-hist(afatal/fatal, main="% Alc. Fatalities")
+hist(fatal, main = "Number of Fatalities", xlab = "fatalities")
+hist(afatal, main = "Number of Alc. Related Fatalities", xlab = "alcohol fatalities")
+hist(fatal/pop*10000, main = "Fatalities/10k pop.", xlab = "fatalities/10k pop.")
+hist(afatal/fatal, main="% Alc. Fatalities", xlab = "% fatalities related to alcohol")
 
 rm(list=ls())
 ```
 
+The plot below shows the proportion of alcohol-related fatalities of each state throughout the years. It can be seen that the proportion of alcohol-related fatalities have been either constant or decreasing in those 7 years. This is more prevalent in states such as Kansas (KS), North Dakota (ND), and Arkansas(AR). 
+However, there is one exception to this trend. In the line plot below, we observe that Mississipi had a significant increase in the proportion of alcohol fatalities from 1983 to 1988.
 ```{r}
 ## Liela's codes
 library(AER)
