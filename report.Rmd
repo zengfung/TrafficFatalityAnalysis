@@ -9,169 +9,37 @@ output:
 ---
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(fig.pos = 'H')
-library(AER)
-library(AER)
-library(ggplot2)
-library(plotly)
-library(tidyverse)
-library(dplyr)
-rm(list=ls())
-data("Fatalities")
 ```
-```{r visualization}
-# mean (years)
-mapping <- Fatalities %>% select(state,year,pop,fatal) %>% mutate(state=toupper(state))
-map <- mapping %>% group_by(state) %>% summarise(pop=mean(pop),fatal=mean(fatal)) 
-map$hover <- with(map, paste(state, '<br>', "pop", pop, "fatal", fatal))
-
-# give state boundaries a white border
-l <- list(color = toRGB("white"), width = 2)
-# specify some map projection/options
-g <- list(
-  scope = 'usa',
-  projection = list(type = 'albers usa'),
-  showlakes = TRUE,
-  lakecolor = toRGB('white')
-)
-
-fig <- plot_geo(map, locationmode = 'USA-states')
-fig <- fig %>% add_trace(
-    z = ~fatal, text=~hover,locations = ~state,
-    color = ~fatal, colors = 'Purples'
-  )
-fig <- fig %>% colorbar(title = "Number of vehicle fatalities")
-fig <- fig %>% layout(
-    title = 'US Traffic Fatalities',
-    geo = g,
-  yaxis = list(type = "log")
-  )
-fig
-
-# by year
-gg <- ggplot(mapping, aes(pop,fatal, color = state)) +
-  geom_point(aes(size = fatal, frame = year, ids = state)) +
-  scale_x_log10()
-ggplotly(gg)
-```
-
-***
-
-Note: 
-- The report might be shown to the class as examples if it is done very well  or very badly, with your identity redacted. 
-- Each student needs to write and submit the report on their own for Project 1. 
-- Remove these remarks in your submission. 
-
-***
-
 
 
 # Introduction
 
-<span style='color:blue'> In this section, state the questions of interest, motivation of this analysis, and potential impact of your results. You can simply rephrase the Project Description for minimal efforts. You can also cite published papers or credible articles on the Internet. For instance, you may find  [this brief](https://eric.ed.gov/?id=ED540485) very relevant. More can be found by searching the key words "class size", "education", "performance." See, among others,[here](https://owl.purdue.edu/owl/research_and_citation/apa_style/apa_formatting_and_style_guide/in_text_citations_the_basics.html) for proper citation formats.   </span>
- 
+
 # Background 
 
-<span style='color:blue'> In this section, explain  
-the source of data, target population, sampling mechanism, and variables in this data set. You can briefly review  existing research or known results, which will help you in the analysis. You can find the data set from many sources, e.g.,  [the AER package](https://www.rdocumentation.org/packages/AER/versions/1.2-9/topics/STAR), [Harvard dataverse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/10766). Both links provides information about this dataset. [The brief](https://eric.ed.gov/?id=ED540485) mentions in previous section is also a good reference to read. You can find more by searching the key word "Project STAR" in, e.g.,  [Google scholar](https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=Project+STAR&btnG=).
-</span> 
 
 # Descriptive analysis 
 
-<span style='color:blue'> 
-Select the variables you find relevant based on your understanding in the Background section. Summarize univariate descriptive statistics for the selected variables (mean, standard deviations, missing values,  quantiles, etc.). You can create the table using functions in base `R`, or use packages (see, e.g., [this note](https://cran.r-project.org/web/packages/qwraps2/vignettes/summary-statistics.html)). </span>
-
-
-<span style='color:blue'> 
-From the data set, we can easily notice that various number of students are assigned to each teacher. In order to obtain one summary measure with teacher as the unit, we need to aggregate students' performance (their math scores in 1st grade). </span>
-
-- Choose the summary measure to be used. Your options are the mean, median, quantiles, etc. Be sure to justify your choice. 
-- Calculate this summary measure for each teacher. You may find the  `summarise()` function helpful ([link](https://dplyr.tidyverse.org/reference/summarise.html)). 
-
-
-<span style='color:blue'> 
-Multivariate descriptive statistics for the outcome (the chosen summary measure for each teacher) with key variables (e.g., class types, school IDs). </span>
-
-- Outcome v.s. class types: You can draw boxplots using `ggplot2` ([link](https://ggplot2.tidyverse.org/reference/geom_boxplot.html)). 
-- Outcome v.s. school IDs: you may want to report selected summary statistics, since there are many schools and a handful of teachers/classes per school. 
- 
 
 # Inferential analysis 
 
-<span style="color:blue">
-We can define a two-way ANOVA model as follows 
-$Y_{ijk} = \mu_{..} + \alpha_{i} + \beta_{j} + \epsilon_{ijk}$, where the index $i$ represents the class type: small ($i=1$), regular ($i=2$), regular with aide ($i=3$), and the index $j$ represents the school indicator. You need to explain the rest of the parameters, state constraints on the parameters, and justify the choice of model (e.g., why no interaction terms). </span>
-
-
-
-
-<span style="color:blue">
-The proposed model is a two-way ANOVA model. You can find the assumptions easily from the course notes or read [the wiki page](https://en.wikipedia.org/wiki/Two-way_analysis_of_variance) on ANOVA. State these assumptions and try to explain them in the context of Project STAR. 
-You can find assumptions for the regression model in a similar manner. 
-</span>
-
-
-<span style="color:blue">
-You can fit the ANOVA model using `aov()` in `R` (or `lm()` for the regression version). Report the fitted results with some attention on how/whether to report the estimated coefficients for school IDs. 
-</span>
-
-
-<span style="color:blue">
-The null hypothesis for the primary question of interest is $H_0 : \alpha_1 = \alpha_2 = \alpha_3 = 0$, and the alternative is $H_a$ : not all $\alpha$s are zero. You can find the test statistic and p-value using `summary(anova.fit)`, if you save your fitted model as `anova.fit`. Please be sure specify the significance level and interpret your test result.  Explain any additional assumptions involved in this test. 
-</span>
-
-
-<span style='color:blue'>
-For the secondary question of interest, one option is the Tukey's range test ( [link](https://en.wikipedia.org/wiki/Tukey%27s_range_test)). Again, specify the significance level, interpret your test result, and explain any additional assumptions involved in this test.  
-</span> 
 
 # Sensitivity analysis 
 
 
-- <span style='color:blue'> Examine the residuals of the fitted model. If you save the fitted ANOVA model as `anova.fit`, four elementary diagnostic plots are available via `plot(anova.fit)`. You need to explain your findings in these plots (e.g., whether assumptions seem to hold). </span>
+# Causal interpretation 
 
-- <span style='color:blue'>  You can find tests for some assumptions by searching the key words "test" and the corresponding assumptions. For instance, to test the equal variance assumption, there exist an [F-test](https://en.wikipedia.org/wiki/F-test_of_equality_of_variances) and [Levene's test](https://en.wikipedia.org/wiki/Levene%27s_test). </span> 
-
-- <span style='color:blue'>  For alternative methods, you can explore 
-  - other summary measures (say, median instead of mean)
-  - or nonparametric approach (ranks within school, with [Friedman test](https://en.wikipedia.org/wiki/Friedman_test) )
-and check if your answers to the questions of interest change. 
-</span>
-
-# (Optional) Causal interpretation 
-
-<span style='color:blue'> As an example for the creativity category in the grading rubric, you can investigate the plausibility of making causal statements. such as smaller classes sizes **lead to** better performance. Discuss the assumptions for causal interpretation and whether they are plausible in Project STAR. See, for instance, [Chapter 9](https://www.cambridge.org/core/books/causal-inference-for-statistics-social-and-biomedical-sciences/stratified-randomized-experiments/5F9B463C29C8BCA09F5C43D12CC2773C) in Imbens and Rubin (2015). 
-</span>
 
 # Discussion 
 
-<span style='color:blue'> 
-Conclude your analysis in this section. You can touch on the following topics. 
-</span> 
-
-- A brief recap of this project. 
-- Findings in the inferential analysis interpreted in the context of Project STAR. 
-- Suggestions for future research and/or policy making given your findings. 
-- Caveats of the current analysis.
 
 # Acknowledgement {-}
 
-<span style='color:blue'>
-By default, it is assumed that you have discussed this project with your teammates and instructors. List any other people that you have discussed this project with. 
-</span>
 
 # Reference {-}
 
-<span style='color:blue'>
-List any references you cited in the report. See [here](https://owl.purdue.edu/owl/research_and_citation/apa_style/apa_formatting_and_style_guide/in_text_citations_the_basics.html) for the APA format. 
-</span> 
-
-Imbens, G., & Rubin, D. (2015). Stratified Randomized Experiments. In Causal Inference for Statistics, Social, and Biomedical Sciences: An Introduction (pp. 187-218). Cambridge: Cambridge University Press. doi:10.1017/CBO9781139025751.010
 
 # Session info {-}
-
-<span style='color:blue'>
-Report information of your `R` session for reproducibility. 
-</span> 
 
 
 ```{r}

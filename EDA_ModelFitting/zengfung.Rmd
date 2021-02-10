@@ -116,6 +116,51 @@ dont think unemployment rate is a good predictor, as it doesnt fit our goals fro
 
 percentage of young drivers have decreased over the years as the number of states that changed their drinkage to 21 has increased. however, later on (if i use a mixed effects model) drinkage is not exactly a good predictor (not significant).
 
+```{r visualization}
+library(AER)
+library(AER)
+library(ggplot2)
+library(plotly)
+library(tidyverse)
+library(dplyr)
+rm(list=ls())
+data("Fatalities")
+
+# mean (years)
+mapping <- Fatalities %>% select(state,year,pop,fatal) %>% mutate(state=toupper(state))
+map <- mapping %>% group_by(state) %>% summarise(pop=mean(pop),fatal=mean(fatal)) 
+map$hover <- with(map, paste(state, '<br>', "pop", pop, "fatal", fatal))
+
+# give state boundaries a white border
+l <- list(color = toRGB("white"), width = 2)
+# specify some map projection/options
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white')
+)
+
+fig <- plot_geo(map, locationmode = 'USA-states')
+fig <- fig %>% add_trace(
+    z = ~fatal, text=~hover,locations = ~state,
+    color = ~fatal, colors = 'Purples'
+  )
+fig <- fig %>% colorbar(title = "Number of vehicle fatalities")
+fig <- fig %>% layout(
+    title = 'US Traffic Fatalities',
+    geo = g,
+  yaxis = list(type = "log")
+  )
+fig
+
+# by year
+gg <- ggplot(mapping, aes(pop,fatal, color = state)) +
+  geom_point(aes(size = fatal, frame = year, ids = state)) +
+  scale_x_log10()
+ggplotly(gg)
+```
+
 
 # Model fitting
 Note: goal is to observe whether the type of law implemented to tacker drunk driving can actually prevent fatalities
@@ -126,7 +171,7 @@ if i index on "state", beertax is not a significant predictor. <br>
 if i index on "year", drinkage is not a significant predictor
 ```{r}
 library(plm)
-model = plm(afatal_prop ~ beertax + jail + service + drinkage,
+model = plm(afatal_prop ~ spirits + beertax + jail + service + drinkage,
             data = Fatalities,
             index = "state",
             model = "within")
