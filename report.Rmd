@@ -425,7 +425,7 @@ coeftest(plm_ap)
 summary(plm_ap)
 # final model
 # - beertax; drinkage; dry; ------? breath;unemp
-plm_final <- plm(afatal_prop~spirits+unemp+drinkage+jail+service+breath,data=data,index=c("state", "year"),model="within")
+plm_final <- plm(afatal_prop~spirits+drinkage+jail+service+breath,data=data,index=c("state", "year"),model="within")
 summary(plm_final)
 
 ##########  Display the fixed effects (constants for each country)
