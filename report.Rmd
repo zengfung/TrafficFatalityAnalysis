@@ -407,15 +407,13 @@ With all of those in mind, we can then move on to fitting an appropriate model a
 
 # Inferential analysis 
 ```{r}
-library(AER)
-library(AER)
-library(ggplot2)
+rm(list=ls())
 library(gplots)
 library(plotly)
 library(tidyverse)
 library(dplyr)
 library(plm)
-rm(list=ls())
+library(MASS)
 data("Fatalities")
 Fatalities$drinkage <-as.factor(floor(Fatalities$drinkage))
 # apply(is.na(Fatalities), 2, which) 
@@ -425,27 +423,32 @@ data <- Fatalities  %>%mutate(fatal_r=(fatal/pop)*10000,afatal_r=(afatal/pop)*10
 plm_ap <- plm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service,data=data,index=c("state", "year"),model="within")
 coeftest(plm_ap)
 summary(plm_ap)
+# final model
+# - beertax; drinkage; dry; ------? breath;unemp
+plm_final <- plm(afatal_prop~spirits+unemp+drinkage+jail+service+breath,data=data,index=c("state", "year"),model="within")
+summary(plm_final)
+
 ##########  Display the fixed effects (constants for each country)
-fixef(plm_ap)
+fixef(plm_final)
 ##########  Testing for fixed effects, null: OLS better than fixed
 ols <- lm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service,data=data)
-pFtest(plm_ap, ols)  # ------- fixed effect model better 
+pFtest(plm_final, ols)  # ------- fixed effect model better 
 ######### # alternative way
 library(lfe)
 lfe_ap <- lfe::felm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service|state,data=data)
 summary(lfe_ap)
 ######### # Hausman test: fixed vs random model
 random <- plm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service,data=data,index=c("state", "year"),model="random")
-phtest(plm_ap, random) # ------ choose fixed model 
+phtest(plm_final, random) # ------ choose fixed model 
 ######### # Testing for time-fixed effects
 time <- plm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service+year,data=data,index=c("state", "year"),model="within")
-pFtest(plm_ap, time)
-plmtest(plm_ap, c("time"), type=("bp")) # ----no need to use time-fixed effects
+pFtest(plm_final, time)
+plmtest(plm_final, c("time"), type=("bp")) # ----no need to use time-fixed effects
 ##########  Testing for cross-sectional dependence
-pcdtest(plm_ap, test = c("lm")) # ------ ??? Cross-sectional dependence
-pcdtest(plm_ap, test = c("cd")) # ------No cross-sectional dependence
+pcdtest(plm_final, test = c("lm")) # ------ ??? Cross-sectional dependence
+pcdtest(plm_final, test = c("cd")) # ------No cross-sectional dependence
 ######### # Testing for serial correlation
-pbgtest(plm_ap) # ------ serial correlation exist
+pbgtest(plm_final) # ------ serial correlation exist
 ######### # Testing for unit roots/stationarity
 Panel.set <- plm.data(data, index = c("state", "year"))
 library(tseries)
@@ -454,14 +457,14 @@ adf.test(Panel.set$afatal_prop, k=2) # ------- no unit roots present
 library(lmtest)
 bptest(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service+state, data =data, studentize=F) # ----------- Presence of heteroskedasticity 
 ##########  Controlling for heteroskedasticity: Robust covariance matrix estimation (Sandwich estimator)
-coeftest(plm_ap)
-coeftest(plm_ap, vcovHC)
-coeftest(plm_ap, vcovHC(fixed, method = "arellano"))
-coeftest(plm_ap, vcovHC(fixed, type = "HC3")) 
-t(sapply(c("HC0", "HC1", "HC2", "HC3", "HC4"), function(x) sqrt(diag(vcovHC(plm_ap, type = x))))) # ------ coefficient not highly correlated
+coeftest(plm_final)
+coeftest(plm_final, vcovHC)
+coeftest(plm_final, vcovHC(fixed, method = "arellano"))
+coeftest(plm_final, vcovHC(fixed, type = "HC3")) 
+t(sapply(c("HC0", "HC1", "HC2", "HC3", "HC4"), function(x) sqrt(diag(vcovHC(plm_final, type = x))))) # ------ coefficient not highly correlated
 
 #########  multicollinearity ############
-design_matrix <- as.data.frame(model.matrix(plm_ap))
+design_matrix <- as.data.frame(model.matrix(plm_final))
 design_matrix$afatal_prop <-plm::Within(plm::pdata.frame(data,index = "state")$afatal_prop)
 # c <- c("drinkage19","drinkage20","drinkage21","breathyes","jailyes","serviceyes")
 # library(magrittr)
@@ -472,15 +475,15 @@ lm_fit1 <- lm(afatal_prop~spirits+unemp+beertax+drinkage19+drinkage20+drinkage21
 car::vif(lm_fit1) #-------- small VIF scores
 #########  Homoscedasticity ############
 par(bg='#eeeeee')
-fitted.values<-as.numeric(data$afatal_prop - residuals(plm_ap))
-plot(fitted.values,residuals(plm_ap),bty='n',xlab='Fitted values', ylab='Residuals',main='Residuals vs. Fitted')
-lines(smooth.spline(fitted.values,residuals(plm_ap), spar=0.9), col=2)
+fitted.values<-as.numeric(data$afatal_prop - residuals(plm_final))
+plot(fitted.values,residuals(plm_final),bty='n',xlab='Fitted values', ylab='Residuals',main='Residuals vs. Fitted')
+lines(smooth.spline(fitted.values,residuals(plm_final), spar=0.9), col=2)
 abline(h=0,col='red',lty='dashed')
 # studentized residuals
-X <- model.matrix(plm_ap)
+X <- model.matrix(plm_final)
 P <- X %*% solve(t(X) %*% X) %*% t(X)
-sigma.sq <- (1 /plm_ap$df.residual)*sum(residuals(plm_ap)^2)
-student.res <- residuals(plm_ap)/(sigma.sq * (1-diag(P)))
+sigma.sq <- (1 /plm_final$df.residual)*sum(residuals(plm_final)^2)
+student.res <- residuals(plm_final)/(sigma.sq * (1-diag(P)))
 plot(fitted.values,student.res,bty='n',xlab='Fitted values', ylab='Residuals',main='Studentized Model residuals vs. Fitted')
 lines(smooth.spline(fitted.values,student.res, spar=0.9), col=2)
 abline(h=0,col='red',lty='dashed') # -------- suspect heteroscedasticity
