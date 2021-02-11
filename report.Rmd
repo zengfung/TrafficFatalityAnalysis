@@ -11,6 +11,7 @@ output:
 knitr::opts_chunk$set(fig.pos = 'H', echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
+# Abstract
 
 # Introduction
 
@@ -21,10 +22,11 @@ knitr::opts_chunk$set(fig.pos = 'H', echo=FALSE, warning=FALSE, message=FALSE)
 # Descriptive analysis 
 
 ## Overview
-To get a good sense on how the data is distributed, each state in the USA is plotted with different shades of purple to signify the rate of vehicle fatalities per 100k people. The reason that the rate of fatalities was chosen instead of the number itself is due to the difference in population in each state. In the map below, while California has an average of more than 5000 fatalities per year, the number is relatively small compared to its population size. In other words, for every 10k people in the state, only 2 people were involved in fatal vehicle accidents.
+In response to the goal of this analysis, there are various ways metrics that one can use to understand the severity of alcohol-related vehicle fatalities throughout the US. Some of which include the number of alcohol-related fatalities per state, or the rate of alcohol-related fatalities per 10k people, or even the ratio between alcohol-related fatalities with overall fatalities. Each metric will produce different results and different interpretation. 
 
-On the other hand, Texas seemed to have the highest average rate of fatalities per 10k people. With an average population of 16.3 million people between 1982 and 1988, this meant that for every 10k people in Texas, 3.65 people were involved in fatal accidents, which was close to double the amount of California!
+To get a good sense on how the type of metric can affect the interpretation of the outcome, we observe the map below, which plots each state in the USA with different shades of purple to signify the different mean proportion of alcohol-related fatalities by state. As we hover over the following map, we can see that California (CA) has one of the largest number of alcohol-related fatalities in the country (averaging more than 5000 deaths per year), yet its rate of alcohol-related fatalities per 10k people of 1.9 is almost half of that of Texas (TX) (3.6 alcohol-related fatalities per 10k people). On the other hand, if we were to compare the ratio of alcohol-related fatalities to overall fatalities, both California (0.26) and Texas' (0.41) statistics were far below that of Mississippi's (0.52).
 
+These differences show the importance of choosing the suitable metric for the purpose of this data analysis. The choice of metric will be discussed in Section 4.2.1.2.
 ```{r}
 ## Liela's codes
 library(AER)
@@ -35,7 +37,7 @@ library(dplyr)
 data("Fatalities")
 
 data <- Fatalities  %>%
-  mutate(fatal_r=(fatal/pop)*10000,afatal_p=(afatal/pop)*10000) %>% 
+  mutate(fatal_r=(fatal/pop)*10000,afatal_p=(afatal/fatal)) %>% 
   select(state,year,fatal_r,afatal_p,spirits,unemp,beertax,drinkage,dry,breath,jail,service,pop,fatal,afatal)
 
 # mean (years)
@@ -44,8 +46,10 @@ mapping <- data %>%
   mutate(state=toupper(state))
 map <- mapping %>% 
   group_by(state) %>% 
-  summarise(fatal=round(mean(fatal),2),fatal_r_mean=round(mean(fatal_r),2))
-map$hover <- with(map, paste(state, "<br>Mean Fatalities/year: ", fatal, "<br>Mean Fatalities per 10k pop./year: ", fatal_r_mean))
+  summarise(fatal=round(mean(fatal),2),
+            fatal_r_mean=round(mean(fatal_r),2), 
+            afatal_p_mean = round(mean(afatal_p),2))
+map$hover <- with(map, paste(state, "<br>Mean Fatalities/year: ", fatal, "<br>Mean Fatalities per 10k pop./year: ", fatal_r_mean, "<br>Mean % Alc. Related Fatalities: ", afatal_p_mean))
 # give state boundaries a white border
 l <- list(color = toRGB("white"), width = 2)
 # specify some map projection/options
@@ -58,16 +62,16 @@ g <- list(
 fig <- plot_geo(map, locationmode = 'USA-states')
 fig <- fig %>% 
   add_trace(
-    z = ~fatal_r_mean, text=~hover,locations = ~state,
-    color = ~fatal_r_mean, colors = 'Purples'
+    z = ~afatal_p_mean, text=~hover,locations = ~state,
+    color = ~afatal_p_mean, colors = 'Purples'
   )
 fig <- fig %>% 
-  colorbar(title = "Vehicle fatalities/10k pop.")
+  colorbar(title = "Mean % Alc. Related Fatalities")
 fig <- fig %>% 
   layout(
     title = 'US Traffic Fatalities',
     geo = g,
-  yaxis = list(type = "log")
+  yaxis = list(type = "identity")
   )
 fig
 rm(list=ls())
@@ -184,7 +188,15 @@ rm(list=ls())
 ```
 
 #### Response Variables
-After observing the trend of the implemented laws, the focus is now switched to analyzing the distribution of fatalities and alcohol fatalities across the country. A quick look at the top two histograms below might suggest that a large portion of states have less than 1000 fatalities per year, and less than 500 alcohol related fatalities per year. However, each state's population need to be taken into account in this case due to the significant variation in population sizes across the country. Our new histograms (bottom two) tells us that the distributions of the data can be approximated as normal. Since the goal of this analysis is to discuss the effects of alcohal-related law implementations, the alcohol-related fatalities to overall fatalities ratio becomes our main topic of interest.
+After observing the trend of the implemented laws, the focus is now switched to analyzing the distribution of fatalities and alcohol fatalities across the country. A quick look at the top two histograms below might suggest that a large portion of states have less than 1000 fatalities per year, and less than 500 alcohol related fatalities per year. However, each state's population need to be taken into account in this case due to the significant variation in population sizes across the country. Our new histograms (bottom two) tells us that the distributions of the data can be approximated as normal. 
+
+Since the goal of this analysis is to discuss the effects of alcohal-related law implementations, the alcohol-related fatalities becomes our main topic of interest. There are a number of approaches in determining the best metric for observing such specific fatalities, among which is the number of alcohol related fatalities per 10k people. However, the issue with such a metric is that it does not tell a good story on whether the implemented traffic policies had success in reducing the number of alcohol-related fatalities. Other factors could have come into play which resulted in a lower overall fatality rate in general, which in turn affects the alcohol-related fatalities rate. 
+
+In this analysis, the metric used for analyzing the effect of traffic laws on alcohol-related fatalities is the proportion of alcohol-related fatalities among the overall fatalities by state and year, ie.
+$$
+p = \frac{\text{Number of alcohol-related fatalities}}{\text{Number of overall fatalities}}
+$$
+An advantage of this metric for the purpose of this data analysis is its robustness to the changes in overall fatalities. In other words, $p$ is still able to give us useful and unbiased information on alcohol-related fatalities in response to the changes in overall fatalities in certain states or years.
 ```{r}
 ## Zengfung's codes
 library(AER)
@@ -223,6 +235,67 @@ rm(list=ls())
 ```
 
 ### Multivariate Analysis
+In this section, we will observe the pairwise interaction between the predictor and response variables. The first thing that was done was to examine the correlation between each pair of continuous predictor variables. In the scatterplot matrix below, it is obvious that there were no distinct patterns between the predictor variables throughout all years, which suggest low correlation between all pairs of continuous predictors.
+```{r}
+## Apurv's codes
+library(AER)
+library(ggplot2)
+library(GGally)
+library(plotly)
+library(dplyr)
+library(panelr)
+library(tidyverse)
+
+# load data
+data("Fatalities")
+attach(Fatalities)
+pafatal = afatal/fatal
+Fatalities$pafatal = pafatal
+state = toupper(state)
+dataset<- data.frame(year,state,unemp,beertax,drinkage,jail,service,breath,dry,pop,pafatal,spirits)
+dataset<-na.omit(dataset)
+
+# pairs plot
+p = ggpairs(data = dataset, 
+            columns = c("unemp", "beertax", "dry", "spirits"), 
+            mapping = aes(frame = as.character(year), label = state, alpha = 0.5),
+            upper = list(continuous = "points"),
+            lower = list(continuous = "cor")) +
+  ggtitle("Pairs plot between predictor variables") 
+ggplotly(p)
+
+rm(list=ls())
+```
+
+Another thing we want to ensure prior to fitting any models in this analysis is the non-presence of the variance inflation factor (VIF). The VIF of the $k$th predictor, denoted as $VIF_k$, is defined as 
+$$
+VIF_k = \frac{1}{1-R_k^2}
+$$
+where $R_k^2$ is the coefficient of multiple determination when the predictor variable $X_k$ is regressed onto the rest of the $X$ variables. Intuitively, a large $VIF_k$ value means that the predictor $X_k$ can be well explained by the other $X$ variables, which would ultimately lead to the multicollinearity phenomenon. Notice that $R_k^2 \geq 0$, and therefore $VIF_k \geq 1$. This means that we want to obtain $VIF$ values that are as small as possible and as close to 1 as possible to prevent multicollinearity.
+
+In the table below, we see that all the $VIF_k$ values are close to 1, signifying that multicollinearity is not an issue in this data set.
+
+```{r}
+library(AER)
+data("Fatalities")
+Fatalities$drinkage = as.factor(floor(Fatalities$drinkage))
+Fatalities$pafatal = Fatalities$afatal/Fatalities$fatal
+
+lm.model = lm(pafatal ~ unemp + beertax + dry + spirits + drinkage + jail + service + breath,
+              data = Fatalities)
+VIF = car::vif(lm.model)[,1]
+data.frame(VIF)
+rm(list=ls())
+```
+
+With the predictor variables analyzed, we now proceed to the pairwise interactions between those predictor variables and the proportion of alcohol-related fatalities. In the series of boxplots below, we gain some insights that one would generally expect: 
+
+* The proportion of alcohol-related fatalities show a decreasing trend troughout the years. <br>
+* The proportion of alcohol-related fatalities is slightly lower when a mandatory community service is being implemented. <br>
+* The proportion of alcohol-related fatalities is slightly lower when a preliminary breath test is being implemented. <br>
+* The proportion of alcohol-related fatalities decreases as the minimum drinking age increases. However, note that the boxplot of alcohol-related fatalities when the minimum drinking age is 21 has a significantly larger variance.
+
+On the other hand, an interesting finding from these boxplots that mandatory jail sentences somehow correlate with a larger proportion of alcohol-related fatalities. This unexpected finding could also be the reason that the number of states implementing such policy decreased between 1986 and 1988, as shown in the previous section.
 
 ```{r}
 ## Apurv's codes
@@ -237,57 +310,43 @@ library(tidyverse)
 # load data
 data("Fatalities")
 attach(Fatalities)
-rfatal = fatal/pop*100000
-Fatalities$rfatal = rfatal
-rafatal = afatal/pop*100000
-Fatalities$rafatal = rafatal
 pafatal = afatal/fatal
 Fatalities$pafatal = pafatal
-dataset<- data.frame(rfatal,rafatal,year,state,unemp,beertax,drinkage,jail,service,breath,dry,pop,pafatal)
+state = toupper(state)
+dataset<- data.frame(year,state,unemp,beertax,drinkage,jail,service,breath,dry,pop,pafatal,spirits)
 dataset<-na.omit(dataset)
-fatal.data<-panel_data(dataset, id=state, wave=year)
 
-
-# pairs plot
-ggpairs(dataset, columns = c(1,2,5:7,11,12), aes(color = year, alpha = 0.5)) +
-  ggtitle("Pairs plot") 
-```
-
-```{r}
-## Apurv's codes
-par(mfrow = c(2,4))
-boxplot(rfatal~jail, main ='Fatality vs Jail',
-xlab='Jail',ylab='Fatality Rate',col=rainbow(4))
-
-boxplot(rfatal~service, main ='Fatality vs Service',
-xlab='Service',ylab='Fatality Rate',col=rainbow(4))
-
-boxplot(rfatal~breath, main ='Fatality vs Breath Test',
-xlab='Breath',ylab='Fatality Rate',col=rainbow(4))
-
+par(mfrow = c(2,3))
 boxplot(pafatal~year, main = 'Alc.Fatality % vs Year',
         xlab = 'Year', ylab = 'Alc. Fatality Rate', col=rainbow(7),
-        cex.main=0.8)
+        cex.main=1)
 
 boxplot(pafatal~jail, main ='Alc.Fatality % vs Jail',
 xlab='Jail',ylab='Alc. Fatality Rate',col=rainbow(4),
-        cex.main=0.8)
+        cex.main=1)
 
 boxplot(pafatal~service, main ='Alc.Fatality % vs Service',
 xlab='Service',ylab='Alc. Fatality Rate',col=rainbow(4),
-        cex.main=0.8)
+        cex.main=1)
 
 boxplot(pafatal~breath, main ='Alc.Fatality % vs Breath Test',
 xlab='Breath',ylab='Alc. Fatality Rate',col=rainbow(4),
-        cex.main=0.8)
+        cex.main=1)
 
 drinkage = as.factor(floor(drinkage))
 Fatalities$drinkage = drinkage
 boxplot(pafatal~drinkage, main = 'Alc.Fatality % vs Drinkage',
         xlab = "Drink Age", ylab = "Alc. Fatality Rate", col=rainbow(4),
-        cex.main=0.8)
+        cex.main=1)
 rm(list=ls())
 ```
+
+After observing the change in proportion of alcohol-related fatalities in response to categorical variables and time, we then aim to do the same with the continuous predictor variables. In the interactive scatter plots below, each data point is colored by its implementation of the madatory jail sentence due to the unexpected findings from previous sections. While no concrete conclusions can be made in that regard, it can be seen that the data points in all four plots converge to the bottom left corner as the years go by. This tells us that:
+
+* The proportion of alcohol-related fatalities have decreased over the years, except for Mississippi. After the year 1985, the proportion of alcohol-related fatalities kept on increasing, while the proportion for other states have continuously decreased. By 1987 and 1988, Mississippi was the outlier in this data. <br>
+* With the exception of the proportion of dry residents, the beer tax, unemployment rate, and spirits consumption generally observed a decreasing trend for all states throughout the 7 years.
+
+Based on what we have seen so far, it does seem as if these policies did gain a positive effect in the long run. Even if the decreasing amount of beer tax resulting in a decreased proportion of alcohol-related fatalities seemed non-intuitive, it could be due to the fact that there is a time-lag/latency element to consider where people take time to adjust to high beer taxes before tending to lower alcohol purchase and intake, which ultimately results in lower alcohol-related fatalities.
 
 ```{r}
 ## Zengfung's codes
@@ -296,21 +355,27 @@ library(plotly)
 library(AER)
 data("Fatalities")
 Fatalities = na.omit(Fatalities)
+Fatalities$state = toupper(Fatalities$state)
 Fatalities$afatal_prop = Fatalities$afatal/Fatalities$fatal
 Fatalities$drinkage_cat = as.factor(floor(Fatalities$drinkage))
 
-p1 = ggplot(data = Fatalities, aes(x = dry, y = afatal_prop, color = jail, frame = year)) + 
+p1 = ggplot(data = Fatalities, 
+            aes(x = dry, y = afatal_prop, label = state, color = jail, frame = year)) + 
   geom_point(alpha = 0.7) + 
   ylab("% alcohol fatalities") +
-  ggtitle("Dry, Unemployment %, and Beer Tax") +
+  ggtitle("Dry, Beer Tax, Unemployment %, and Spirits Consumption") +
   theme(legend.title = element_blank(), legend.position = "none")
-p2 = ggplot(data = Fatalities, aes(x = unemp, y = afatal_prop, color = jail, frame = year)) + 
-  geom_point(alpha = 0.7) + 
-  theme(legend.title = element_blank(), legend.position = "none")
-p3 = ggplot(data = Fatalities, aes(x = beertax, y = afatal_prop, color = jail, frame = year)) +
+p2 = ggplot(data = Fatalities, 
+            aes(x = unemp, y = afatal_prop, label = state, color = jail, frame = year)) + 
+    ylab("% alcohol fatalities") +
+    geom_point(alpha = 0.7) + 
+    theme(legend.title = element_blank(), legend.position = "none")
+p3 = ggplot(data = Fatalities, 
+            aes(x = beertax, y = afatal_prop, label = state, color = jail, frame = year)) +
   geom_point(alpha = 0.7) +
   labs(color = "Jail")
-p4 = ggplot(data = Fatalities, aes(x = spirits, y = afatal_prop, color = jail, frame = year)) +
+p4 = ggplot(data = Fatalities, 
+            aes(x = spirits, y = afatal_prop, label = state, color = jail, frame = year)) +
   geom_point(alpha = 0.7) +
   theme(legend.title = element_blank(), legend.position = "bottom")
 
@@ -319,6 +384,8 @@ fig
 
 rm(list=ls())
 ```
+
+With the important analysis explored, we now turn to analyzing the distribution of young drivers (aged between 15-24) throughout the years. While this may not be directly correlated with the current data analysis, it would be interesting to see if the change in the minimum drinking age has any effect on the distribution of young drivers. As expected, with the increase in the minimum drinking age, the proportion of young drivers decreased. This could be due to the decrease in proportion of legal young drivers.
 
 ```{r}
 ## Zengfung's codes
@@ -336,6 +403,7 @@ ggplot(data = Fatalities, aes(x = youngdrivers, fill = drinkage_cat)) +
 rm(list=ls())
 ```
 
+With all of those in mind, we can then move on to fitting an appropriate model and produce some causal inference for this data.
 
 # Inferential analysis 
 ```{r}
