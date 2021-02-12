@@ -442,7 +442,6 @@ With all of those in mind, we can then move on to fitting an appropriate model a
 # Inferential analysis 
 
 ```{r set up, include=FALSE}
-rm(list=ls())
 library(AER)
 library(gplots)
 library(plotly)
@@ -542,9 +541,7 @@ lm_fit1 <- lm(afatal_prop~spirits+drinkage19+drinkage20+drinkage21+breathyes+jai
 car::vif(lm_fit1)                                  #-------- small VIF scores
 ```
 
-- Testing for cross-sectional dependence: Though, in our case, we have micro panels with few years and a large number of subject/states, whether residuals across entities are correlated or not was tested cautiously. 
-
-Unfortunately, both Breusch-Pagan LM test and Pesaran CD test show cross-sectional dependence. Hence, the assumption regarding independent subjects is violated. Potential reasons and consequences of this dependence will be discussed in the discussion section.
+- Testing for cross-sectional dependence: Though, in our case, we have micro panels with few years and a large number of subject/states, whether residuals across entities are correlated or not was tested cautiously. Unfortunately, both Breusch-Pagan LM test and Pesaran CD test show cross-sectional dependence. Hence, the assumption regarding independent subjects is violated. Potential reasons and consequences of this dependence will be discussed in the discussion section.
 
 - Testing for unit roots: Since the Augmented Dickey-Fuller test (p-value <0.01) indicates no unit roots present, no further transformation of variables is needed.
 
