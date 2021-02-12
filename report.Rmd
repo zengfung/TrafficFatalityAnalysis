@@ -1,6 +1,6 @@
 ---
 title: "Effect of alcohol regulation and drunk driving laws on alcohol-involved traffic fatalities ratio: 1982-1988 US traffic fatalities for the lower 48 states"  
-author: "TEam 2: Zeng Fung Liew (913802324), Yixing Lu (915501254), Liela Meng (917843295), Apurv Srivastav (918936075)"
+author: "Team 2: Zeng Fung Liew (913802324), Yixing Lu (915501254), Liela Meng (917843295), Apurv Srivastav (918936075)"
 date: "February 12, 2021"
 output:
   html_document:
@@ -23,6 +23,7 @@ Although given these evidence for the effectiveness of adopting alcohol regulati
 
 # Background 
 The data for this project comes from a study in the Journal of Health Economics. Alcohol related traffic incidents are not anything new. In 1996, a study looked into vehicle fatalities from 1982 to 1988. The data was obtained from the National Highway Traffic Safety Administration’s Fatal Accident Reporting System (FARS). [1] They conducted a population-based study that observed traffic fatalities from 48 states (excludes Alaska, Hawaii, and District of Columbia) over 7 years. There were 336 observations on 34 different variables, however California had missing values in the year 1988 so that observation was omitted leading to 335 observations. The reason this study is important is that these were the last years that states had differing minimum drinking ages. After 1988, the drinking age increased to 21 years old throughout the United States. The predictor variables that were examined in the study were state, year, spirits consumption, unemployment rate, per capita personal income, employment//population ratio, tax on a case of beer, percent of people who were Southern Baptist, percent of people who were Mormon, the minimum legal drinking age, percent residing in “dry” counties, percent of drivers aged 15-24, average miles per driver, whether the state had a mandatory jail sentence, whether the state had mandatory community service, the population of each state, the population of 15 to 17 year old people in each state, the population of 18 to 20 year old people in each state, the population of 21 to 24 year old people in each state, the total vehicle miles (millions), the US employment rate, the US employment/population ratio, and GSP rate of charge. The response variables were number of fatalities, number of nighttime fatalities, number of single fatalities, fatalities among 15- to 17-year-old individuals, fatalities among 18- to 20-year-old individuals, fatalities among 21- to 24-year-old individuals, and alcoholic related fatalities. The  study also examined the nighttime fatalities involving the three different age groups (15-17; 18-20; 21-24). [14]The objective of this project is to build a predictive model from the data that predicts the percentage of vehicle fatalities that are alcohol related. The predictor variables that are being considered are alcohol related. They are jail, service, tax on beer (beertax), minimum drinking age (drinkage), percent residing in dry counties (dry), and preliminary breath test law (breath). However, after some further research it was found that unemployment is also positively correlated with alcohol misuse, so unemployment was added as a variable as well.[15]  The response variables will be proportion of alcoholic fatalities (alcoholic fatalities over total fatalities). These variables identified in the data set are afatal (number of alcohol-involved vehicle fatalities), pop (population), state (factor indicating state), year (factor indicating year), spirits (spirits consumption), beertax (tax on case of beer), drinkage (minimum legal drinking age), dry (percent residing in “dry” counties), unemp (unemployment rate), jail (mandatory jail sentence), service (mandatory community service), and breath (preliminary breath test law). The unit of analysis was each state for each year, so the variables state and year were included from the data set. According to a 2017 study by WalletHub there were significant difference in strict DUI and DWI laws in the 50 states and the District of Columbia. States with the strictest laws were Arizona, Georgia, Alaska, Kansas, and Oklahoma meanwhile the states with the most lenient laws were Idaho, North Dakota, Ohio, District of Columbia, and South Dakota. [17] This means that states could be a factor in proportion of alcoholic fatalities. The data was accessed using the AER package in R.
+
 # Descriptive analysis 
 
 ## Overview
@@ -275,11 +276,9 @@ Another thing we want to ensure prior to fitting any models in this analysis is 
 $$
 VIF_k = \frac{1}{1-R_k^2}
 $$
-where $R_k^2$ is the coefficient of multiple determination when the predictor variable $X_k$ is regressed onto the rest of the $X$ variables. Intuitively, a large $VIF_k$ value means that the predictor $X_k$ can be well explained by the other $X$ variables, which would ultimately lead to the multicollinearity phenomenon. Notice that $R_k^2 \geq 0$, and therefore $VIF_k \geq 1$. This means that we want to obtain $VIF$ values that are as small as possible and as close to 1 as possible to prevent multicollinearity.
+where $R_k^2$ is the coefficient of multiple determination when the predictor variable $X_k$ is regressed onto the rest of the $X$ variables. Intuitively, a large $VIF_k$ value means that the predictor $X_k$ can be well explained by the other $X$ variables, which would ultimately lead to the multicollinearity phenomenon. Notice that $R_k^2 \geq 0$, and therefore $VIF_k \geq 1$. This means that we want to obtain $VIF$ values that are as small as possible and as close to 1 as possible to prevent multicollinearity. In this dataset, we see that all the $VIF_k$ values are considerably close to 1, signifying that multicollinearity is not an issue in this data set.
 
-In the table below, we see that all the $VIF_k$ values are close to 1, signifying that multicollinearity is not an issue in this data set.
-
-```{r}
+```{r,eval = FALSE}
 library(AER)
 data("Fatalities")
 Fatalities$drinkage = as.factor(floor(Fatalities$drinkage))
@@ -468,17 +467,19 @@ $$
 
 ### Parameter notation:
 
-$i=1,2\dots,48$: state index; $t=1,2,\dots,6,7.$: time index.
+* $i=1,2\dots,48$: state index; $t=1,2,\dots,6,7.$: time index.
 
-$Y_{it}$: ratio of number of alcohol-involved vehicle fatalities to overall vehicle fatalities for state $i$ and year $t$. $Y_{it}=\frac{Number of alcohol involved vehicle fatalities_{it}}{Number of vehicle fatalities_{it}}$.
+* $Y_{it}$: ratio of number of alcohol-involved vehicle fatalities to overall vehicle fatalities for state $i$ and year $t$. 
 
-$\alpha_i$: State-specific parameter (unobserved time-invariant individual effect) for state $i$.
+* $Y_{it}=\frac{\text{Number of alcohol involved vehicle fatalities}_{it}}{\text{Number of vehicle fatalities}_{it}}$.
 
-$\beta_1,\beta_2,\beta_3,\beta_4,\beta_5,\beta_6,\beta_7$: represents for coefficients of spirits, drink-age 19, drink-age 20, drink-age 21, jail, service, breath, respectively.
+* $\alpha_i$: State-specific parameter (unobserved time-invariant individual effect) for state $i$.
 
-$X_{it,1}$: is a continuous variable; $X_{it,2},X_{it,3},X_{it,4},X_{it,5},X_{it,6},X_{it,7}$ are dummy variables.
+* $\beta_1,\beta_2,\beta_3,\beta_4,\beta_5,\beta_6,\beta_7$: represents for coefficients of spirits, drink-age 19, drink-age 20, drink-age 21, jail, service, breath, respectively.
 
-Notice: since we dropped one observation with missing values (CA 1988), we have unbalanced panel.
+* $X_{it,1}$: is a continuous variable; $X_{it,2},X_{it,3},X_{it,4},X_{it,5},X_{it,6},X_{it,7}$ are dummy variables.
+
+Note: Since we dropped one observation with missing values (CA 1988), we have an unbalanced panel.
 
 ### Assumptions:
 
@@ -486,7 +487,7 @@ Notice: since we dropped one observation with missing values (CA 1988), we have 
 
 (2) $\epsilon_{it}$ are independent random variables with zero mean and constant variance: $$E(\epsilon_{it})=0,\  Var(\epsilon_{it})=\sigma^2$$
 
-### Model justifing
+### Model justification
 ```{r final model, include=FALSE}
 # - beertax; drinkage; dry; ------? breath;unemp
 plm_final <- plm(afatal_prop~spirits+drinkage+jail+service+breath,data=data,index=c("state", "year"),model="within")
@@ -508,11 +509,16 @@ pFtest(time,plm_final)
 plmtest(plm_final, c("time"), type=("bp"))      # ----no need to use time-fixed effects
 ```
 
-- Test for heterogeneity: To know whether the intercepts for each state are equal or not, an F test for individual effects was conducted. $H_0:\alpha_1=\dots=\alpha_{48}$ vs. $H_0:$ not all $\alpha_i$ are equal. P-value $< 2.2e-16$ indicates rejecting the null hypothesis, which corresponds to our intuition of using fixed effects rather than ordinary least squares.
+- Test for heterogeneity: To know whether the intercepts for each state are equal or not, an F test for individual effects was conducted. $$H_0:\alpha_1=\dots=\alpha_{48} \text{ vs. } H_A: \text{ not all } \alpha_i \text{ are equal}$$ 
+P-value $< 2.2e-16$ indicates rejecting the null hypothesis, which corresponds to our intuition of using fixed effects rather than ordinary least squares.
 
-- Test for fixed effect over random effect model: To decide between fixed and random effects, we used the Hausman test: $H_0:$ Random effects vs. $H_a$: Fixed effects. P-value $< 2.2e-16$ means fixed effects model is more appropriate.
+- Test for fixed effect over random effect model: To decide between fixed and random effects, we used the Hausman test: 
+$$H_0: \text{ Random effects vs. } H_A: \text{ Fixed effects.}$$ 
+P-value $< 2.2e-16$ means fixed effects model is more appropriate.
 
-- Test for time-fixed effects: $H_0:$ need time-fixed effects vs. $H_a:$ no need for time-fixed effects. Both F-test for individuals effects (p-value=0.015) and Largrange Multiplier test (p-value=0.001) show no need to use time-fixed effects.
+- Test for time-fixed effects: 
+$$H_0: \text{ need time-fixed effects vs. } H_A:  \text{ no need for time-fixed effects}$$
+Both F-test for individuals effects (p-value=0.015) and Lagrange Multiplier test (p-value=0.001) show no need to use time-fixed effects.
 
 
 # Sensitivity analysis 
@@ -618,23 +624,23 @@ In conclusion, alcohol can affect drivers’ cognition, vigilance, attention, ju
 Working codes can be found at: https://github.com/zengfung/TrafficFatalityAnalysis.git. 
 
 # Reference {-}
-[1] National Center for Health Statistics (US. (2011). Health, United States, 2010: With special feature on death and dying.
-[2] Facts, T. S. (2012). Alcohol-Impaired Driving. DOT HS, 811, 630.
-[3] Desapriya, E. B., Iwase, N., & TAYE, B. N. (2002). Alcohol related traffic safety legislation: Where do we stand today?. IATSS research, 26(2), 76-84.
-[4] National Highway Traffic Safety Administration. Fatality Analysis Reporting System (FARS). Washington, DC: cited 2013 March; Available from: http://www.nhtsa.gov/FARS
-[5] Hingson, R. W., Howland, J., & Levenson, S. (1988). Effects of legislative reform to reduce drunken driving and alcohol-related traffic fatalities. Public Health Reports, 103(6), 659.
-[6] Wagenaar, A. C., Maldonado-Molina, M. M., Ma, L., Tobler, A. L., & Komro, K. A. (2007). Effects of legal BAC limits on fatal crash involvement: analyses of 28 states from 1976 through 2002. Journal of safety research, 38(5), 493-499.
-[7] Voas, R. B., Tippetts, A. S., & Fell, J. C. (2003). Assessing the effectiveness of minimum legal drinking age and zero tolerance laws in the United States. Accident Analysis & Prevention, 35(4), 579-587.
-[8] Wagenaar, A. C., Maldonado-Molina, M. M., Erickson, D. J., Ma, L., Tobler, A. L., & Komro, K. A. (2007). General deterrence effects of US statutory DUI fine and jail penalties: long-term follow-up in 32 states. Accident Analysis & Prevention, 39(5), 982-994.
-[9] Silver, D., Macinko, J., Bae, J. Y., Jimenez, G., & Paul, M. (2013). Variation in US traffic safety policy environments and motor vehicle fatalities 1980–2010. Public health, 127(12), 1117-1125.
-[10] Imai, K., & Kim, I. S. (2019). When should we use unit fixed effects regression models for causal inference with longitudinal data?. American Journal of Political Science, 63(2), 467-490.
-[11] Edward W. Frees. (2004). Longitudinal and Panel Data: Analysis and Applications for the Social Sciences.
-[12] Oscar Torres-Reyna. (2010). Getting started in Fixed/Random Effects Models using R.
-[13] K. Arthur Endsley. (2019). Implementing fixed effects panel models in R.
-[14] Ruhm, C. (1996). Alcohol Policies and Highway Vehicle Fatalities. Journal of Health Economics 15(4): 435-454.
-[15] Popovici I, French MT. Does Unemployment Lead to Greater Alcohol Consumption?. Ind Relat (Berkeley). 2013;52(2):444-466. doi:10.1111/irel.12019
-[16] Comoreanu, A. (2017, August 10). Strictest and most lenient states on dui. Retrieved February 12, 2021, from https://wallethub.com/edu/dui-penalties-by-state/13549
-[17] E. Chamberlain and R. Solomon, “The case pfor a 0.05% criminal law blood alcohol concentration limit for driving,” Injury Prevention, vol. 8, supplement 3, pp. iii1–iii17, 200
+[1] National Center for Health Statistics (US. (2011). Health, United States, 2010: With special feature on death and dying. <br>
+[2] Facts, T. S. (2012). Alcohol-Impaired Driving. DOT HS, 811, 630. <br>
+[3] Desapriya, E. B., Iwase, N., & TAYE, B. N. (2002). Alcohol related traffic safety legislation: Where do we stand today?. IATSS research, 26(2), 76-84. <br>
+[4] National Highway Traffic Safety Administration. Fatality Analysis Reporting System (FARS). Washington, DC: cited 2013 March; Available from: http://www.nhtsa.gov/FARS <br>
+[5] Hingson, R. W., Howland, J., & Levenson, S. (1988). Effects of legislative reform to reduce drunken driving and alcohol-related traffic fatalities. Public Health Reports, 103(6), 659. <br>
+[6] Wagenaar, A. C., Maldonado-Molina, M. M., Ma, L., Tobler, A. L., & Komro, K. A. (2007). Effects of legal BAC limits on fatal crash involvement: analyses of 28 states from 1976 through 2002. Journal of safety research, 38(5), 493-499. <br>
+[7] Voas, R. B., Tippetts, A. S., & Fell, J. C. (2003). Assessing the effectiveness of minimum legal drinking age and zero tolerance laws in the United States. Accident Analysis & Prevention, 35(4), 579-587. <br>
+[8] Wagenaar, A. C., Maldonado-Molina, M. M., Erickson, D. J., Ma, L., Tobler, A. L., & Komro, K. A. (2007). General deterrence effects of US statutory DUI fine and jail penalties: long-term follow-up in 32 states. Accident Analysis & Prevention, 39(5), 982-994. <br>
+[9] Silver, D., Macinko, J., Bae, J. Y., Jimenez, G., & Paul, M. (2013). Variation in US traffic safety policy environments and motor vehicle fatalities 1980–2010. Public health, 127(12), 1117-1125. <br>
+[10] Imai, K., & Kim, I. S. (2019). When should we use unit fixed effects regression models for causal inference with longitudinal data?. American Journal of Political Science, 63(2), 467-490. <br>
+[11] Edward W. Frees. (2004). Longitudinal and Panel Data: Analysis and Applications for the Social Sciences. <br>
+[12] Oscar Torres-Reyna. (2010). Getting started in Fixed/Random Effects Models using R. <br>
+[13] K. Arthur Endsley. (2019). Implementing fixed effects panel models in R. <br>
+[14] Ruhm, C. (1996). Alcohol Policies and Highway Vehicle Fatalities. Journal of Health Economics 15(4): 435-454. <br>
+[15] Popovici I, French MT. Does Unemployment Lead to Greater Alcohol Consumption?. Ind Relat (Berkeley). 2013;52(2):444-466. doi:10.1111/irel.12019 <br>
+[16] Comoreanu, A. (2017, August 10). Strictest and most lenient states on dui. Retrieved February 12, 2021, from https://wallethub.com/edu/dui-penalties-by-state/13549 <br>
+[17] E. Chamberlain and R. Solomon, “The case pfor a 0.05% criminal law blood alcohol concentration limit for driving,” Injury Prevention, vol. 8, supplement 3, pp. iii1–iii17, 200 <br>
 
 
 # Session info {-}
