@@ -623,10 +623,10 @@ Working codes can be found at: https://github.com/zengfung/TrafficFatalityAnalys
 [8] Wagenaar, A. C., Maldonado-Molina, M. M., Erickson, D. J., Ma, L., Tobler, A. L., & Komro, K. A. (2007). General deterrence effects of US statutory DUI fine and jail penalties: long-term follow-up in 32 states. Accident Analysis & Prevention, 39(5), 982-994.
 [9] Silver, D., Macinko, J., Bae, J. Y., Jimenez, G., & Paul, M. (2013). Variation in US traffic safety policy environments and motor vehicle fatalities 1980–2010. Public health, 127(12), 1117-1125.
 [10] Imai, K., & Kim, I. S. (2019). When should we use unit fixed effects regression models for causal inference with longitudinal data?. American Journal of Political Science, 63(2), 467-490.
-
+[11] Edward W. Frees. (2004). Longitudinal and Panel Data: Analysis and Applications for the Social Sciences.
+[12] Oscar Torres-Reyna. (2010). Getting started in Fixed/Random Effects Models using R.
+[13] K. Arthur Endsley. (2019). Implementing fixed effects panel models in R.
 # Session info {-}
-
-
 ```{r}
 sessionInfo()
 ```
