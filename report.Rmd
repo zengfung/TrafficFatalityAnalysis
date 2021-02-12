@@ -442,6 +442,7 @@ With all of those in mind, we can then move on to fitting an appropriate model a
 # Inferential analysis 
 ```{r}
 rm(list=ls())
+library(AER)
 library(gplots)
 library(plotly)
 library(tidyverse)
@@ -455,48 +456,34 @@ data <- Fatalities  %>%mutate(fatal_r=(fatal/pop)*10000,afatal_r=(afatal/pop)*10
 
 #########  model fitting ############
 plm_ap <- plm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service,data=data,index=c("state", "year"),model="within")
-coeftest(plm_ap)
 summary(plm_ap)
 # final model
 # - beertax; drinkage; dry; ------? breath;unemp
 plm_final <- plm(afatal_prop~spirits+drinkage+jail+service+breath,data=data,index=c("state", "year"),model="within")
+coeftest(plm_final)
 summary(plm_final)
-
+#########  model justifing ############
 ##########  Display the fixed effects (constants for each country)
 fixef(plm_final)
 ##########  Testing for fixed effects, null: OLS better than fixed
 ols <- lm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service,data=data)
-pFtest(plm_final, ols)  # ------- fixed effect model better 
-######### # alternative way
-library(lfe)
-lfe_ap <- lfe::felm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service|state,data=data)
-summary(lfe_ap)
+pFtest(plm_final, ols)                          # ------- fixed effect model better 
 ######### # Hausman test: fixed vs random model
-random <- plm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service,data=data,index=c("state", "year"),model="random")
-phtest(plm_final, random) # ------ choose fixed model 
+random <- plm(afatal_prop~spirits+drinkage+jail+service+breath,data=data,index=c("state", "year"),model="random")
+phtest(plm_final, random)                       # ------ choose fixed model 
 ######### # Testing for time-fixed effects
-time <- plm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service+year,data=data,index=c("state", "year"),model="within")
-pFtest(plm_final, time)
-plmtest(plm_final, c("time"), type=("bp")) # ----no need to use time-fixed effects
+time <- plm(afatal_prop~spirits+drinkage+jail+service+breath+year,data=data,index=c("state", "year"),model="within")
+pFtest(time,plm_final)
+plmtest(plm_final, c("time"), type=("bp"))      # ----no need to use time-fixed effects
 ##########  Testing for cross-sectional dependence
-pcdtest(plm_final, test = c("lm")) # ------ ??? Cross-sectional dependence
-pcdtest(plm_final, test = c("cd")) # ------No cross-sectional dependence
+pcdtest(plm_final, test = c("lm"))              # ------ ??? Cross-sectional dependence
+pcdtest(plm_final, test = c("cd"))              # ------No cross-sectional dependence
 ######### # Testing for serial correlation
-pbgtest(plm_final) # ------ serial correlation exist
+pbgtest(plm_final)                              # ------ serial correlation exist
 ######### # Testing for unit roots/stationarity
 Panel.set <- plm.data(data, index = c("state", "year"))
 library(tseries)
-adf.test(Panel.set$afatal_prop, k=2) # ------- no unit roots present
-######### #  Testing for heteroskedasticity 
-library(lmtest)
-bptest(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service+state, data =data, studentize=F) # ----------- Presence of heteroskedasticity 
-##########  Controlling for heteroskedasticity: Robust covariance matrix estimation (Sandwich estimator)
-coeftest(plm_final)
-coeftest(plm_final, vcovHC)
-coeftest(plm_final, vcovHC(fixed, method = "arellano"))
-coeftest(plm_final, vcovHC(fixed, type = "HC3")) 
-t(sapply(c("HC0", "HC1", "HC2", "HC3", "HC4"), function(x) sqrt(diag(vcovHC(plm_final, type = x))))) # ------ coefficient not highly correlated
-
+adf.test(Panel.set$afatal_prop, k=2)              # ------- no unit roots present
 #########  multicollinearity ############
 design_matrix <- as.data.frame(model.matrix(plm_final))
 design_matrix$afatal_prop <-plm::Within(plm::pdata.frame(data,index = "state")$afatal_prop)
@@ -504,10 +491,11 @@ design_matrix$afatal_prop <-plm::Within(plm::pdata.frame(data,index = "state")$a
 # library(magrittr)
 # design_matrix %<>% mutate_at(c,funs(factor(.)))
 design_matrix <- design_matrix %>% mutate()
-lm_fit1 <- lm(afatal_prop~spirits+unemp+beertax+drinkage19+drinkage20+drinkage21+dry+breathyes+jailyes+serviceyes, data=design_matrix)
+lm_fit1 <- lm(afatal_prop~spirits+drinkage19+drinkage20+drinkage21+breathyes+jailyes+serviceyes, data=design_matrix)                         #------ no multicollinearity
 # VIF score
-car::vif(lm_fit1) #-------- small VIF scores
+car::vif(lm_fit1)                                  #-------- small VIF scores
 #########  Homoscedasticity ############
+par(mfrow=c(1,2))
 par(bg='#eeeeee')
 fitted.values<-as.numeric(data$afatal_prop - residuals(plm_final))
 plot(fitted.values,residuals(plm_final),bty='n',xlab='Fitted values', ylab='Residuals',main='Residuals vs. Fitted')
@@ -520,14 +508,57 @@ sigma.sq <- (1 /plm_final$df.residual)*sum(residuals(plm_final)^2)
 student.res <- residuals(plm_final)/(sigma.sq * (1-diag(P)))
 plot(fitted.values,student.res,bty='n',xlab='Fitted values', ylab='Residuals',main='Studentized Model residuals vs. Fitted')
 lines(smooth.spline(fitted.values,student.res, spar=0.9), col=2)
-abline(h=0,col='red',lty='dashed') # -------- suspect heteroscedasticity
+abline(h=0,col='red',lty='dashed')              # -------- suspect heteroscedasticity
 #########  Influential Observations ############
 require(faraway)
 halfnorm(diag(P),labs=1:335, ylab='Leverages',nlab=1) # 2p/n=0.06
-data[287,] # --- ut 1982
-data %>% filter(state=="ut") # ut 1982 beertax low
+data[175,] # --- nv 1982
+data %>% filter(state=="nv") # nv 1982 no -> yes; unemp
 #########  Partial Effects Plots ######### 
 ```
+$Y_{it}=\alpha_i+\beta_1 X_{it,1}+\beta_2 X_{it,2}+\beta_3 X_{it,3}+\beta_4 X_{it,4}+\beta_5 X_{it,5}++\beta_6 X_{it,6}+\beta_7 X_{it,7}+\epsilon_{it}$, where $i=1,2\dots,48$, $t=1,2,\dots,6,7.$
+
+Parameter notation:
+
+$i$: state index; $t$: time index.
+
+$Y_{it}$: ratio of number of alcohol-involved vehicle fatalities to overall vehicle fatalities for state $i$ and year $t$.
+
+$\alpha_i$: State-specific parameter (unobserved time-invariant individual effect) for state $i$.
+
+$\beta_1,\beta_2,\beta_3,\beta_4,\beta_5,\beta_6,\beta_7$ represents for spirits, drink-age 19, drink-age 20, drink-age 21, jail, service, breath, respectively.
+
+Notice: since we dropped one observation with missing values (CA 1988), we have unbalanced panel data.
+
+Assumptions:
+
+Conditional relationship of $Y_{it}$ given {$X_{it,1},\dots, X_{it,7}$} is linear in the explanatory variables.
+
+$\epsilon_{it}$ are independent random variables with zero mean and constant variance: $E(\epsilon_{it})=0, Var(\epsilon_{it})=\sigma^2$.
+
+
+Model congruence examination:
+
+Test for heterogeneity: In order to know whether the intercepts for each states are equal, F test for individual effects was conducted. $H_0:\alpha_1=\dots=\alpha_{48}$ vs. $H_0:$ not all $\alpha_i$ are equal.
+
+P-value $< 2.2e-16$ indicates rejecting the  null hypothesis.
+
+Test for fixed effect over random effect model: To decide between fixed and random effects, we used Hausman test and have hypothesis $H_0:$ Random effects vs. $H_a$: Fixed effects.
+
+P-value $< 2.2e-16$ means fixed effects model is more appropriate.
+
+Test for time-fixed effects: $H_0:$ need time-fixed effects vs. $H_a:$ no need for time-fixed effects.
+Both F-test for individuals effects (p-value=0.015) and Largrange Multiplier test (p-value=0.001) show no need to use time-fixed effects.
+
+Testing for cross-sectional dependence: Though, in our case, we have micro panels with few years and large number of subject/states, residuals across entities are not correlated was test cautiously. 
+
+Unfortunately, both Breusch-Pagan LM test and Pesaran CD test show cross-sectional dependence. Potential reasons and consequences of this dependence will be discussed in section discussion.
+
+Testing for unit roots: Since the Augmented Dickey-Fuller test (p-value <0.01) indicates no unit roots present, no further transformation of variable are needed.
+
+Multicollinearity: Since VIF scores are relatively small, we concluded there is no multicollinearity. 
+
+Test for homoscedasticity: based on residuals plots, we can see as overall spread incthe rease as fitted value increase, thus we suspect that the homoscedasticity assumption might not holds.
 
 
 # Sensitivity analysis 
