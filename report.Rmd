@@ -440,7 +440,8 @@ rm(list=ls())
 With all of those in mind, we can then move on to fitting an appropriate model and produce some causal inference for this data.
 
 # Inferential analysis 
-```{r}
+
+```{r set up, include=FALSE}
 rm(list=ls())
 library(AER)
 library(gplots)
@@ -453,16 +454,47 @@ data("Fatalities")
 Fatalities$drinkage <-as.factor(floor(Fatalities$drinkage))
 # apply(is.na(Fatalities), 2, which) 
 data <- Fatalities  %>%mutate(fatal_r=(fatal/pop)*10000,afatal_r=(afatal/pop)*10000,afatal_prop=afatal_r/fatal_r) %>% dplyr::select(state,year,fatal_r,afatal_r,afatal_prop,spirits,unemp,beertax,drinkage,dry,breath,jail,service,pop,fatal,nfatal) %>% drop_na()
-
 #########  model fitting ############
 plm_ap <- plm(afatal_prop~spirits+unemp+beertax+drinkage+dry+breath+jail+service,data=data,index=c("state", "year"),model="within")
 summary(plm_ap)
-# final model
+```
+
+As we noticed, this data set is panel data, having several repeated measures (6 for CA and 7 for else) for each state. Thus, we want to use fixed effects representing the state-specific means, and a fixed-effect model was fitted. Since it is a question-driven analysis based on p-values and variables of interest, eventually, we included five predictors in our final model: spirits consumption, minimum legal drinking age, preliminary breath test law, mandatory jail sentence, and mandatory community service.
+
+## One-way individual fixed effect model
+$$
+Y_{it}=\alpha_i+\beta_1 X_{it,1}+\beta_2 X_{it,2}+\beta_3 X_{it,3}+\beta_4 X_{it,4}+\beta_5 X_{it,5}++\beta_6 X_{it,6}+\beta_7 X_{it,7}+\epsilon_{it}
+$$
+
+
+### Parameter notation:
+
+$i=1,2\dots,48$: state index; $t=1,2,\dots,6,7.$: time index.
+
+$Y_{it}$: ratio of number of alcohol-involved vehicle fatalities to overall vehicle fatalities for state $i$ and year $t$. $Y_{it}=\frac{Number of alcohol involved vehicle fatalities_{it}}{Number of vehicle fatalities_{it}}$.
+
+$\alpha_i$: State-specific parameter (unobserved time-invariant individual effect) for state $i$.
+
+$\beta_1,\beta_2,\beta_3,\beta_4,\beta_5,\beta_6,\beta_7$: represents for coefficients of spirits, drink-age 19, drink-age 20, drink-age 21, jail, service, breath, respectively.
+
+$X_{it,1}$: is a continuous variable; $X_{it,2},X_{it,3},X_{it,4},X_{it,5},X_{it,6},X_{it,7}$ are dummy variables.
+
+Notice: since we dropped one observation with missing values (CA 1988), we have unbalanced panel.
+
+### Assumptions:
+
+(1) Conditional relationship of $Y_{it}$ given {$X_{it,1},\dots, X_{it,7}$} is linear in the explanatory variables.
+
+(2) $\epsilon_{it}$ are independent random variables with zero mean and constant variance: $$E(\epsilon_{it})=0,\  Var(\epsilon_{it})=\sigma^2$$
+
+### Model justifing
+```{r final model, include=FALSE}
 # - beertax; drinkage; dry; ------? breath;unemp
 plm_final <- plm(afatal_prop~spirits+drinkage+jail+service+breath,data=data,index=c("state", "year"),model="within")
 coeftest(plm_final)
 summary(plm_final)
-#########  model justifing ############
+```
+```{r  model justifing, include=FALSE}
 ##########  Display the fixed effects (constants for each country)
 fixef(plm_final)
 ##########  Testing for fixed effects, null: OLS better than fixed
@@ -475,15 +507,29 @@ phtest(plm_final, random)                       # ------ choose fixed model
 time <- plm(afatal_prop~spirits+drinkage+jail+service+breath+year,data=data,index=c("state", "year"),model="within")
 pFtest(time,plm_final)
 plmtest(plm_final, c("time"), type=("bp"))      # ----no need to use time-fixed effects
+```
+
+- Test for heterogeneity: To know whether the intercepts for each state are equal or not, an F test for individual effects was conducted. $H_0:\alpha_1=\dots=\alpha_{48}$ vs. $H_0:$ not all $\alpha_i$ are equal. P-value $< 2.2e-16$ indicates rejecting the null hypothesis, which corresponds to our intuition of using fixed effects rather than ordinary least squares.
+
+- Test for fixed effect over random effect model: To decide between fixed and random effects, we used the Hausman test: $H_0:$ Random effects vs. $H_a$: Fixed effects. P-value $< 2.2e-16$ means fixed effects model is more appropriate.
+
+- Test for time-fixed effects: $H_0:$ need time-fixed effects vs. $H_a:$ no need for time-fixed effects. Both F-test for individuals effects (p-value=0.015) and Largrange Multiplier test (p-value=0.001) show no need to use time-fixed effects.
+
+
+# Sensitivity analysis 
+
+```{r model justify,include=FALSE}
 ##########  Testing for cross-sectional dependence
-pcdtest(plm_final, test = c("lm"))              # ------ ??? Cross-sectional dependence
-pcdtest(plm_final, test = c("cd"))              # ------No cross-sectional dependence
-######### # Testing for serial correlation
-pbgtest(plm_final)                              # ------ serial correlation exist
+pcdtest(plm_final, test = c("lm"))              # ------ Cross-sectional dependence
+pcdtest(plm_final, test = c("cd"))              # ------ cross-sectional dependence
+######### # Testing for serial correlation      # ------ not necessary for micro panel
+pbgtest(plm_final)                              # ------ serial correlation 
 ######### # Testing for unit roots/stationarity
 Panel.set <- plm.data(data, index = c("state", "year"))
 library(tseries)
 adf.test(Panel.set$afatal_prop, k=2)              # ------- no unit roots present
+```
+```{r multicollinearity, include=FALSE}
 #########  multicollinearity ############
 design_matrix <- as.data.frame(model.matrix(plm_final))
 design_matrix$afatal_prop <-plm::Within(plm::pdata.frame(data,index = "state")$afatal_prop)
@@ -494,74 +540,59 @@ design_matrix <- design_matrix %>% mutate()
 lm_fit1 <- lm(afatal_prop~spirits+drinkage19+drinkage20+drinkage21+breathyes+jailyes+serviceyes, data=design_matrix)                         #------ no multicollinearity
 # VIF score
 car::vif(lm_fit1)                                  #-------- small VIF scores
+```
+
+- Testing for cross-sectional dependence: Though, in our case, we have micro panels with few years and a large number of subject/states, whether residuals across entities are correlated or not was tested cautiously. 
+
+Unfortunately, both Breusch-Pagan LM test and Pesaran CD test show cross-sectional dependence. Hence, the assumption regarding independent subjects is violated. Potential reasons and consequences of this dependence will be discussed in the discussion section.
+
+- Testing for unit roots: Since the Augmented Dickey-Fuller test (p-value <0.01) indicates no unit roots present, no further transformation of variables is needed.
+
+- Test for multicollinearity: Since VIF scores are relatively small (the biggest one is 6 - drinking age 21), we concluded there is no multicollinearity issue. 
+
+- Test for homoscedasticity: Based on the below residuals plots, the smooth curve for residual is relatively identical to the x-axis; thus, we conclude that the homoscedasticity assumption holds.
+
+```{r residuals,include=FALSE}
 #########  Homoscedasticity ############
-par(mfrow=c(1,2))
-par(bg='#eeeeee')
 fitted.values<-as.numeric(data$afatal_prop - residuals(plm_final))
-plot(fitted.values,residuals(plm_final),bty='n',xlab='Fitted values', ylab='Residuals',main='Residuals vs. Fitted')
-lines(smooth.spline(fitted.values,residuals(plm_final), spar=0.9), col=2)
-abline(h=0,col='red',lty='dashed')
 # studentized residuals
 X <- model.matrix(plm_final)
 P <- X %*% solve(t(X) %*% X) %*% t(X)
 sigma.sq <- (1 /plm_final$df.residual)*sum(residuals(plm_final)^2)
 student.res <- residuals(plm_final)/(sigma.sq * (1-diag(P)))
-plot(fitted.values,student.res,bty='n',xlab='Fitted values', ylab='Residuals',main='Studentized Model residuals vs. Fitted')
-lines(smooth.spline(fitted.values,student.res, spar=0.9), col=2)
-abline(h=0,col='red',lty='dashed')              # -------- suspect heteroscedasticity
-#########  Influential Observations ############
+```
+```{r residuals plots,echo=FALSE,fig.height=4, fig.width=8}
+par(mfrow=c(1,2))
+plot(fitted.values,residuals(plm_final),bty='n',xlab='Fitted values', ylab='Residuals',main='Residuals vs. Fitted values')
+lines(smooth.spline(fitted.values,residuals(plm_final), spar=1.2), col=2)
+abline(h=0,col='red',lty='dashed')
+# studentized residuals
+plot(fitted.values,student.res,bty='n',xlab='Fitted values', ylab='Residuals',main='Studentized residuals vs. Fitted values')
+lines(smooth.spline(fitted.values,student.res, spar=1.2), col=2)
+abline(h=0,col='red',lty='dashed')              # -------- suspect heteroscedasticity?
+```
+
+- Test for normality: From the QQ plots of two residuals, we can see slight heavy tails at left and right tails. But, we think it only shows a slight deviance from normality and concluded the residuals are normal distributed. 
+
+```{r normality, echo=FALSE,fig.height=4, fig.width=8}
+par(mfrow=c(1,2))
+qqnorm(residuals(plm_final),main= "QQ plot of residuals")
+qqline(residuals(plm_final),col='red')
+qqnorm(student.res,main= "QQ plot of studentized residuals")
+qqline(student.res,col='red') # ----- normal
+```
+
+- Test for outliers: From the leverage plot, we can see no there are no specious leverage values. Hence, we concluded no large outliers.
+
+```{r Influential Observations,include=FALSE}
 require(faraway)
 halfnorm(diag(P),labs=1:335, ylab='Leverages',nlab=1) # 2p/n=0.06
-data[175,] # --- nv 1982
-data %>% filter(state=="nv") # nv 1982 no -> yes; unemp
-#########  Partial Effects Plots ######### 
+# data[175,] # --- nv 1982
+# data %>% filter(state=="nv") # nv 1982 no -> yes; unemp
 ```
-$Y_{it}=\alpha_i+\beta_1 X_{it,1}+\beta_2 X_{it,2}+\beta_3 X_{it,3}+\beta_4 X_{it,4}+\beta_5 X_{it,5}++\beta_6 X_{it,6}+\beta_7 X_{it,7}+\epsilon_{it}$, where $i=1,2\dots,48$, $t=1,2,\dots,6,7.$
-
-Parameter notation:
-
-$i$: state index; $t$: time index.
-
-$Y_{it}$: ratio of number of alcohol-involved vehicle fatalities to overall vehicle fatalities for state $i$ and year $t$.
-
-$\alpha_i$: State-specific parameter (unobserved time-invariant individual effect) for state $i$.
-
-$\beta_1,\beta_2,\beta_3,\beta_4,\beta_5,\beta_6,\beta_7$ represents for spirits, drink-age 19, drink-age 20, drink-age 21, jail, service, breath, respectively.
-
-Notice: since we dropped one observation with missing values (CA 1988), we have unbalanced panel data.
-
-Assumptions:
-
-Conditional relationship of $Y_{it}$ given {$X_{it,1},\dots, X_{it,7}$} is linear in the explanatory variables.
-
-$\epsilon_{it}$ are independent random variables with zero mean and constant variance: $E(\epsilon_{it})=0, Var(\epsilon_{it})=\sigma^2$.
-
-
-Model congruence examination:
-
-Test for heterogeneity: In order to know whether the intercepts for each states are equal, F test for individual effects was conducted. $H_0:\alpha_1=\dots=\alpha_{48}$ vs. $H_0:$ not all $\alpha_i$ are equal.
-
-P-value $< 2.2e-16$ indicates rejecting the  null hypothesis.
-
-Test for fixed effect over random effect model: To decide between fixed and random effects, we used Hausman test and have hypothesis $H_0:$ Random effects vs. $H_a$: Fixed effects.
-
-P-value $< 2.2e-16$ means fixed effects model is more appropriate.
-
-Test for time-fixed effects: $H_0:$ need time-fixed effects vs. $H_a:$ no need for time-fixed effects.
-Both F-test for individuals effects (p-value=0.015) and Largrange Multiplier test (p-value=0.001) show no need to use time-fixed effects.
-
-Testing for cross-sectional dependence: Though, in our case, we have micro panels with few years and large number of subject/states, residuals across entities are not correlated was test cautiously. 
-
-Unfortunately, both Breusch-Pagan LM test and Pesaran CD test show cross-sectional dependence. Potential reasons and consequences of this dependence will be discussed in section discussion.
-
-Testing for unit roots: Since the Augmented Dickey-Fuller test (p-value <0.01) indicates no unit roots present, no further transformation of variable are needed.
-
-Multicollinearity: Since VIF scores are relatively small, we concluded there is no multicollinearity. 
-
-Test for homoscedasticity: based on residuals plots, we can see as overall spread incthe rease as fitted value increase, thus we suspect that the homoscedasticity assumption might not holds.
-
-
-# Sensitivity analysis 
+```{r leverage plot,echo=FALSE,fig.height=4, fig.width=6}
+halfnorm(diag(P),labs=1:335, ylab='Leverages',nlab=1) 
+```
 
 
 # Causal interpretation 
