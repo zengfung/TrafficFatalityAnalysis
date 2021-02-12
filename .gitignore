@@ -8,6 +8,9 @@ Project2_description.Rmd
 # r history file
 **.Rhistory
 
+# model fitting/eda folder
+EDA_ModelFitting/**
+
 # DS_Store
 .DS_Store
 .DS_Store?
