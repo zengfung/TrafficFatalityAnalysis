@@ -14,7 +14,11 @@ knitr::opts_chunk$set(fig.pos = 'H', echo=FALSE, warning=FALSE, message=FALSE)
 # Abstract
 
 # Introduction
+Traffic fatalites are a major cause of death in the United States, especially a leading cause of death in the first three decades of life [1]. Alcohol is involved in almost one third of the traffic fatalities nationwide. In 2016, 10,497 people died in alcohol-impaired driving crashes, accounting 28% of traffic fatalities in US [2]. It has been shown that a variety of individual skills would be impaired with a blood alcohol concentration (BAC) level well below 0.05%, and the risk of crashes increased exponentially [3].
 
+From 1980s to 2010s, the deaths resulting from motorvehicle collisions declined by nearly 35% [4]. It coincided with the period of time (1980-1985) when many states made considerable amount of legislative reforms in order to reduce drunken driving and fatal automobile crashes: increasing minimum drinking age to 21, adopting criminal and administrative per se laws, and instituting penalty increases for drunken driving [5]. Many previous studies had shown that the adoption of alcohol regulations and alcohol-impaired driving laws could reduce fatal car crashes: defining BAC limits for drivers at 0.08 or lower [6]; minumum drinking age (21) laws and zero-tolerance laws dor younger drivers [7], fines and jail sentences for alcohol-impaired driving [8].
+
+Although given these evidence for the effectiveness of adopting alcohol regulations and drunken driving punishment laws on reducing alcohol-related traffic fatalities, the traffic policy enviornment in diffrent states often varied a lot, and many socioecnomic factors that can potentially impact alcohol-involved traffic fatalies are not consistent across states. Therefore, the objective of the current project is to investigate _the effect of alcohol regulation and alcohol-impaired driving laws on the proportion of alcohol-involved fatalities among all traffic fatalities, controlling for state-specific unobservable confounders_. 
 
 # Background 
 
@@ -500,7 +504,13 @@ data %>% filter(state=="ut") # ut 1982 beertax low
 
 
 # Causal interpretation 
-In panel data, measures were conducted on the same entity (state) repeatedly at different time points (years). Also, the fixedd effect model adopted in the current project accounted for unobserved, entity-specific, time-invariant confounders. Given these features, it might seem reasonble to make causal inference for significant predictors on the response variable. However, a fixed effect model requires strong exogeneity assumptions in order to make causal inference, including: (a) no unobserved time-varying confounders; (b) past outcomes do not directly affect current outcome; (c) past treatments do not directly affet current outcome; (d) past outcome do not directly affect current treatment (reverse causation). 
+Based on the final model, three factors were significant in explaining the change in alcohol-related fatalities ration: spirits consumption, mandatory jail sentence, and mandatory community service for driving-under-influence, after controlling for preliminary breath test law, and minimum drinking age. The assumptions needed for causal inference, problems with current model, and possible solutions were discussed here.
+
+In panel data, measures were conducted on the same entity (state) repeatedly at different time points (years). The fixed effect model adopted in the current project accounted for unobserved, entity-specific, time-invariant confounders. Given these features, this model controlled for the effect of some unmeasured or un-measurable factors that differed across states on alcohol fatalities ratio. Therefore, if no model assumptions were violated, then we should be able to make causal inference on the significant factors within each state. Our model essentially explained how the change in the response variable overtime specific to a state ($Y_{it}-\bar{Y}_i$), could be explained by the change in predictors of that state ($X_{it}-\bar{X}_i$).
+
+However, the model diagnosis result showed that our model had cross-sectional dependence, which is a violation of the model assumption that states should be independent of each other. Although each state had their own legislative system, the federal law can still largely affect state laws. 
+
+However, a fixed effect model requires exogeneity assumptions in order to make causal inference, including: (a) no unobserved time-varying confounders; (b) past outcomes do not directly affect current outcome; (c) past treatments do not directly affet current outcome; (d) past outcome do not directly affect current treatment (reverse causation). 
 
 Assumption (a) is hard to verify and also difficult to relax under the fixed effect model. Thus we assumed no time-varying covariates were omitted from the current model and see whether the other assumptions were violated in the current model and how they can be relaxed. Assumption (b) can be relaxed without interfering with the causal inference between current treatment and current outcome so long as we condition on past treatment, and assuming past outcome does no directly affect current treatment. To relax assumption (c), we could add a small number of lagged treatment effect into the model (e.g. treatment from the year before). Last, for assumption (d): no reverse causation, a popular approach to relax it is to include instrumental variables for endogenous predictors. Endogenous predictors are those included in the model but are correlated with the error term. This could happen when the response variable can reversely cause the predictor, or some omitted confounders can affect both dependent and independent variables. Instrumental variables were those not included in the model, associated with the endogenous predictor, but not associated with the unobserved confounders. 
 
@@ -513,7 +523,14 @@ Some previous studies on the traffic policy environment and fatality rate sugges
 
 
 # Reference {-}
-
+[1] National Center for Health Statistics (US. (2011). Health, United States, 2010: With special feature on death and dying.
+[2] Facts, T. S. (2012). Alcohol-Impaired Driving. DOT HS, 811, 630.
+[3] Desapriya, E. B., Iwase, N., & TAYE, B. N. (2002). Alcohol related traffic safety legislation: Where do we stand today?. IATSS research, 26(2), 76-84.
+[4] National Highway Traffic Safety Administration. Fatality Analysis Reporting System (FARS). Washington, DC: cited 2013 March; Available from: http://www.nhtsa.gov/FARS
+[5] Hingson, R. W., Howland, J., & Levenson, S. (1988). Effects of legislative reform to reduce drunken driving and alcohol-related traffic fatalities. Public Health Reports, 103(6), 659.
+[6] Wagenaar, A. C., Maldonado-Molina, M. M., Ma, L., Tobler, A. L., & Komro, K. A. (2007). Effects of legal BAC limits on fatal crash involvement: analyses of 28 states from 1976 through 2002. Journal of safety research, 38(5), 493-499.
+[7] Voas, R. B., Tippetts, A. S., & Fell, J. C. (2003). Assessing the effectiveness of minimum legal drinking age and zero tolerance laws in the United States. Accident Analysis & Prevention, 35(4), 579-587.
+[8] Wagenaar, A. C., Maldonado-Molina, M. M., Erickson, D. J., Ma, L., Tobler, A. L., & Komro, K. A. (2007). General deterrence effects of US statutory DUI fine and jail penalties: long-term follow-up in 32 states. Accident Analysis & Prevention, 39(5), 982-994.
 
 # Session info {-}
 
