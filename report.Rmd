@@ -3,9 +3,8 @@ title: "Effect of alcohol regulation and drunk driving laws on alcohol-involved 
 author: "Team 2: Zeng Fung Liew (913802324), Yixing Lu (915501254), Liela Meng (917843295), Apurv Srivastav (918936075)"
 date: "February 12, 2021"
 output:
-  html_document:
-    df_print: paged
-    number_sections: yes
+  md_document:
+    variant: markdown
 ---
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(fig.pos = 'H', echo=FALSE, warning=FALSE, message=FALSE)
